@@ -4,6 +4,6 @@ cmake version 3.31.5
 GNU Make 4.4.1
 arm-none-eabi-gcc.exe (GNU Arm Embedded Toolchain 10-2020-q4-major) 10.2.1 20201103 (release)
 code 1.147.0
-picotool v2.3.1 (Windows, GNU-16.2.0, Release)
-pico-sdk 2.3.1
+picotool v2.3.0 (Windows, GNU-16.1.0, Release)
+pico-sdk 2.3.0
 PICO_SDK_PATH=D:\Repositories\pico\pico-sdk
