@@ -5,9 +5,10 @@ set(PICO_PLATFORM rp2040)
 
 include(pico_sdk_import.cmake)
 
-project(134_led_modul)
+project(134_led_module)
 
 pico_sdk_init()
+
 
 add_executable(${PROJECT_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/main.c
