@@ -3,17 +3,17 @@
 устройство: 2e8a:000a
 серийный номер: 5303284740DF8F1C
 порт: COM7
-начало: 2026-11-22T16:07:08
+начало: 2026-11-22T16:26:58
    0.000 --> v
-   0.016 <-- inf main:78 got v
-   0.030 <-- device: es-led-module 1.0.0, built Nov 22 2026 16:04:57, log level 3
-   1.036 --> e
-   1.055 <-- inf main:78 got e
-   1.081 <-- inf handle_command:24 led on
-   2.092 --> d
-   2.097 <-- inf main:78 got d
-   2.105 <-- inf handle_command:30 led off
-   3.107 --> q
-   3.117 <-- inf main:78 got q
-   3.124 <-- inf handle_command:39 unknown command: q
+   0.024 <-- dbg main:78 got v
+   0.034 <-- device: es-led-module 1.0.0, built Nov 22 2026 16:24:47, log level 3
+   1.049 --> e
+   1.064 <-- dbg main:78 got e
+   1.071 <-- inf handle_command:24 led on
+   2.081 --> d
+   2.106 <-- dbg main:78 got d
+   2.113 <-- inf handle_command:30 led off
+   3.147 --> q
+   3.165 <-- dbg main:78 got q
+   3.175 <-- err handle_command:39 unknown command: q
 итог: отправлено команд 4
