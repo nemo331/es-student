@@ -1,0 +1,28 @@
+задание: 2.1.1
+проект: 211-command-usb
+устройство: 2e8a:000a
+серийный номер: 5303284740DF8F1C
+порт: COM7
+начало: 2026-11-22T19:53:13
+   0.000 --> enable
+   0.132 <-- enable
+   0.142 <-- dbg read_line:73 got enable
+   0.148 <-- inf handle_command:33 led on
+   2.188 --> disable
+   2.333 <-- disable
+   2.340 <-- dbg read_line:73 got disable
+   2.351 <-- inf handle_command:39 led off
+   4.397 --> info
+   4.494 <-- info
+   4.503 <-- dbg read_line:73 got info
+   4.510 <-- project: 211-command-usb
+   4.514 <-- repo: https://github.com/nemo331/es-student
+   4.516 <-- board: pico
+   4.518 <-- serial: 5303284740DF8F1C
+   4.522 <-- chip: manufacturer 0x927, part 0x0002, revision 2
+   4.525 <-- project: 2.3.0
+   6.570 --> nosuchcommand
+   6.835 <-- nosuchcommand
+   6.843 <-- dbg read_line:73 got nosuchcommand
+   6.854 <-- err handle_command:53 unknown command: nosuchcommand
+итог: отправлено команд 4, принято строк 17
