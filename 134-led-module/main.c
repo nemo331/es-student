@@ -3,6 +3,7 @@
 #include "hardware/gpio.h"
 #include "led.h"
 #include "log.h"
+#include "device.h"
 
 
 // const uint LED_PIN = 25;
@@ -33,6 +34,10 @@ void handle_command(int command)
     else if (command == 'v')
     {
         log_version();
+    }
+    else if (command == 'i')
+    {
+        device_info();
     }
     else
     {
@@ -75,7 +80,7 @@ int main()
             continue;
         }
 
-        LOG_DBG("got %c\n", command);
+        //LOG_DBG("got %c\n", command);
         
        handle_command(command);
     }
