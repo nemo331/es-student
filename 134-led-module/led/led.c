@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stdint.h>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
@@ -12,7 +11,7 @@ void led_init(void)
 {
     // Настраиваем пин как выход
     gpio_set_function(LED_PIN, GPIO_FUNC_SIO);
-    gpio_set_dir(LED_PIN, true);  // true = выход
+    gpio_set_dir(LED_PIN, GPIO_OUT); //gpio_set_dir(LED_PIN, true);  // true = выход
 
     // Устанавливаем начальное состояние (выключено)
     led_set(false);

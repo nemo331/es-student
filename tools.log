@@ -2,7 +2,7 @@
 Python 3.13.17
 cmake version 3.31.5
 GNU Make 4.4.1
-arm-none-eabi-gcc.exe (GNU Arm Embedded Toolchain 10-2020-q4-major) 10.2.1 20201103 (release)
+arm-none-eabi-gcc.exe (xPack GNU Arm Embedded GCC x86_64) 15.2.1 20251203
 code 1.147.0
 picotool v2.3.0 (Windows, GNU-16.1.0, Release)
 pico-sdk 2.3.0
