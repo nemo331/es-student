@@ -1,6 +1,6 @@
-// command.h
-#ifndef COMMAND_H
-#define COMMAND_H
+#pragma once
+
+#include "pico/types.h"
 
 typedef void (*command_handler_t)(void);
 
@@ -11,6 +11,4 @@ struct command_t
 };
 
 extern const struct command_t commands[];
-#define COMMAND_COUNT (sizeof(commands) / sizeof(commands[0]))
-
-#endif
+extern const uint command_count;

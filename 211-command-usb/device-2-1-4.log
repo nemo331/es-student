@@ -1,0 +1,70 @@
+задание: 2.1.4
+проект: 211-command-usb
+устройство: 2e8a:000a
+серийный номер: 5303284740DF8F1C
+порт: COM7
+начало: 2026-11-23T21:49:10
+   0.000 --> fw_info
+   0.147 <-- fw_info
+   0.155 <-- dbg read_line:121 got fw_info
+   0.165 <-- object         address    value
+   0.171 <-- main           0x10000329 0x46deb5f0
+   0.174 <-- fw_info        0x100006a1 0x46ceb5f0
+   0.177 <-- commands       0x10007c10 0x00000007
+   0.180 <-- enable         0x10000281
+   0.183 <-- disable        0x100002bd
+   0.188 <-- info           0x100002f9
+   0.191 <-- version        0x10000301
+   0.193 <-- ping           0x10000309
+   0.196 <-- mem_info       0x10000319
+   0.199 <-- fw_info        0x10000321
+   0.204 <-- DEVICE_PROJECT 0x10007758 211-command-usb
+   0.210 <-- DEVICE_REPO    0x10007778 https://github.com/nemo331/es-student
+   0.213 <-- DEVICE_BOARD   0x100077ac pico
+   0.217 <-- data_variable  0x20000f40 0x00000066
+   0.221 <-- bss_variable   0x20001f0c 0x00000002
+   0.224 <-- stack_variable 0x20041f7c 0x0000079a
+   0.258 <-- heap_variable  0x20002408 0x0000079f
+   2.290 --> fw_info
+   2.450 <-- fw_info
+   2.457 <-- dbg read_line:121 got fw_info
+   2.466 <-- object         address    value
+   2.469 <-- main           0x10000329 0x46deb5f0
+   2.472 <-- fw_info        0x100006a1 0x46ceb5f0
+   2.476 <-- commands       0x10007c10 0x00000007
+   2.478 <-- enable         0x10000281
+   2.481 <-- disable        0x100002bd
+   2.485 <-- info           0x100002f9
+   2.488 <-- version        0x10000301
+   2.490 <-- ping           0x10000309
+   2.493 <-- mem_info       0x10000319
+   2.496 <-- fw_info        0x10000321
+   2.501 <-- DEVICE_PROJECT 0x10007758 211-command-usb
+   2.506 <-- DEVICE_REPO    0x10007778 https://github.com/nemo331/es-student
+   2.509 <-- DEVICE_BOARD   0x100077ac pico
+   2.512 <-- data_variable  0x20000f40 0x00000067
+   2.518 <-- bss_variable   0x20001f0c 0x00000003
+   2.520 <-- stack_variable 0x20041f7c 0x0000079a
+   2.524 <-- heap_variable  0x20002408 0x0000079f
+   4.540 --> fw_info
+   4.692 <-- fw_info
+   4.700 <-- dbg read_line:121 got fw_info
+   4.707 <-- object         address    value
+   4.716 <-- main           0x10000329 0x46deb5f0
+   4.725 <-- fw_info        0x100006a1 0x46ceb5f0
+   4.732 <-- commands       0x10007c10 0x00000007
+   4.735 <-- enable         0x10000281
+   4.738 <-- disable        0x100002bd
+   4.741 <-- info           0x100002f9
+   4.743 <-- version        0x10000301
+   4.746 <-- ping           0x10000309
+   4.751 <-- mem_info       0x10000319
+   4.754 <-- fw_info        0x10000321
+   4.757 <-- DEVICE_PROJECT 0x10007758 211-command-usb
+   4.762 <-- DEVICE_REPO    0x10007778 https://github.com/nemo331/es-student
+   4.765 <-- DEVICE_BOARD   0x100077ac pico
+   4.769 <-- data_variable  0x20000f40 0x00000068
+   4.772 <-- bss_variable   0x20001f0c 0x00000004
+   4.775 <-- stack_variable 0x20041f7c 0x0000079a
+   4.778 <-- heap_variable  0x20002408 0x0000079f
+итог: отправлено команд 3, принято строк 60
