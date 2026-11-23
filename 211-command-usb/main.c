@@ -5,6 +5,7 @@
 #include "led.h"
 #include "log.h"
 #include "device.h"
+#include "command.h"
 
 
 
@@ -17,6 +18,45 @@ const uint DEBOUNCE_MS = 20;
 char line[LINE_SIZE];
 uint line_length = 0;
 
+void cmd_enable(void)
+{
+    // включаем светодиод и сообщаем новое состояние
+    led_set(true);
+    LOG_INF("led %s\n", led_is_on() ? "on" : "off");
+}
+
+void cmd_disable(void)
+{
+    // выключаем светодиод и сообщаем новое состояние
+    led_set(false);
+    LOG_INF("led %s\n", led_is_on() ? "on" : "off");
+}
+
+void cmd_info(void)
+{
+    // печатаем паспорт устройства
+    device_info();
+}
+
+void cmd_version(void)
+{
+    // печатаем строку журнала о версии прошивки
+    log_version();
+}
+
+void cmd_ping(void)
+{
+    printf("pong\n");
+}
+
+const struct command_t commands[] = {
+    { "enable", cmd_enable },
+    { "disable", cmd_disable },
+    { "info", cmd_info },
+    { "version", cmd_version },
+    { "ping", cmd_ping },
+};
+
 bool get_button_debounce(uint pin)
 {
     bool state = gpio_get(pin);
@@ -24,34 +64,25 @@ bool get_button_debounce(uint pin)
     return state && gpio_get(pin);
 }
 
+
+
+
 void handle_command(const char *command)
 {
-    if (strcmp(command, "enable") == 0)
+    for (uint i = 0; i < COMMAND_COUNT; i++)
     {
-        // включаем светодиод и сообщаем новое состояние
-        led_set(true);
-        LOG_INF("led %s\n", led_is_on() ? "on" : "off");
+        if (strcmp(command, commands[i].name) == 0)
+        {
+            if (commands[i].handler != NULL)
+            {
+                commands[i].handler();
+            }
+
+            return;
+        }
     }
-    else if (strcmp(command, "disable") == 0)
-    {
-        // выключаем светодиод и сообщаем новое состояние
-        led_set(false);
-        LOG_INF("led %s\n", led_is_on() ? "on" : "off");
-    }
-    else if (strcmp(command, "info") == 0)
-    {
-        // печатаем паспорт устройства
-        device_info();
-    }
-    else if (strcmp(command, "version") == 0)
-    {
-        // печатаем строку журнала о версии прошивки
-        log_version();
-    }
-    else
-    {
-        LOG_ERR("unknown command: %s\n", command);
-    }
+
+    LOG_ERR("unknown command: %s\n", command);
 }
 
 void read_line(void)
