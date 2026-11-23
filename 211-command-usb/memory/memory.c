@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "pico/stdlib.h"
+
 #include "command.h"
 #include "device.h"
 #include "memory.h"
@@ -42,10 +43,16 @@ static void row_area(const char *name, uintptr_t start, uintptr_t end)
            name, (unsigned)start, (unsigned)end, (unsigned)(end - start));
 }
 
-// таблица объектов: имя, адрес, значение
+// таблица объектов: имя, адрес (hex), значение (dec)
 static void row(const char *object, uintptr_t address, uintptr_t value)
 {
-    printf("%-14s 0x%08x 0x%08x\n", object, (unsigned)address, (unsigned)value);
+    printf("%-14s 0x%08x %10u\n", object, (unsigned)address, (unsigned)value);
+}
+
+// имя, адрес с признаком Thumb и машинный код (hex — это байты, а не число)
+static void row_code(const char *object, uintptr_t address, uintptr_t code)
+{
+    printf("%-14s 0x%08x 0x%08x\n", object, (unsigned)address, (unsigned)code);
 }
 
 // memory.c: паспорт памяти
@@ -140,11 +147,13 @@ void fw_info(void)
     uint16_t *main_code = (uint16_t *)(main_addr & ~1u);
     uint16_t *fw_code = (uint16_t *)(fw_addr & ~1u);
 
-    row("main", main_addr, (uintptr_t)main_code[0] | ((uintptr_t)main_code[1] << 16));
-    row("fw_info", fw_addr, (uintptr_t)fw_code[0] | ((uintptr_t)fw_code[1] << 16));
+    row_code("main", main_addr,
+             (uintptr_t)main_code[0] | ((uintptr_t)main_code[1] << 16));
+    row_code("fw_info", fw_addr,
+             (uintptr_t)fw_code[0] | ((uintptr_t)fw_code[1] << 16));
 
     // таблица команд: адрес массива и её длина
-    row("commands", (uintptr_t)commands, (uintptr_t)command_count);
+    row("commands", (uintptr_t)commands, command_count);
 
     // обработчики: имя команды и адрес обработчика, строкой на команду
     for (uint i = 0; i < command_count; i++)
