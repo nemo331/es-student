@@ -6,6 +6,7 @@
 #include "command.h"
 #include "device.h"
 #include "memory.h"
+#include "led.h"
 
 // main объявлена в другом файле, заголовка у main.c нет —
 // поэтому одиночное объявление здесь уместнее, чем новый заголовок
@@ -182,4 +183,55 @@ void fw_info(void)
 
     // возвращаем блок кучи
     free(heap_variable);
+}
+
+/*void boot_info(void)
+{
+    // 1. Таблица векторов: загрузчик второй стадии занимает первые 256 байт,
+    // сразу за ним по адресу 0x10000100 лежит таблица из документации
+    #define VECTOR_TABLE 0x10000100
+
+    const uint32_t *vectors = (const uint32_t *)VECTOR_TABLE;
+
+    uint32_t stack_top     = vectors[0];
+    uint32_t reset_handler = vectors[1];
+
+    printf("%-16s 0x%08x\n", "stack top", (unsigned)stack_top);
+    printf("%-16s 0x%08x\n", "reset handler", (unsigned)reset_handler);
+    // признак Thumb в младшем разряде — не часть адреса
+    printf("%-16s 0x%08x\n", "reset (thumb off)", (unsigned)(reset_handler & ~1u));
+
+    // 2. Регистр GPIO_IN блока SIO — 0xd0000004 из datasheet RP2040 (Address Map).
+    // volatile: значение меняет аппаратура, компилятору кэшировать нельзя
+    volatile uint32_t *gpio_in = (volatile uint32_t *)0xd0000004;
+
+    // номер вывода спрашиваем у модуля led — константы LED_PIN здесь нет
+    uint32_t level = (*gpio_in >> led_pin()) & 1u;
+
+    printf("%-16s %u\n", "led bit", (unsigned)level);
+    printf("%-16s %u\n", "gpio_get()", (unsigned)gpio_get(led_pin()));
+}*/
+
+void boot_info(void)
+{
+    // таблица векторов лежит сразу за загрузчиком второй стадии: 0x10000100
+    const uint32_t *vectors = (const uint32_t *)0x10000100;
+
+    uint32_t stack_top     = vectors[0];
+    uint32_t reset_handler = vectors[1];
+
+    printf("  %-15s0x%08x\n", "vector table", (unsigned)(uintptr_t)vectors);
+    printf("  %-13s0x%08x\n", "stack top", (unsigned)stack_top);
+    printf("  %-13s0x%08x\n", "reset", (unsigned)reset_handler);
+    printf("  %-13s0x%08x\n", "reset (even)", (unsigned)(reset_handler & ~1u));
+
+    // регистр GPIO_IN блока SIO — 0xd0000004 из datasheet RP2040.
+    // volatile: значение меняет аппаратура, компилятору кэшировать нельзя
+    volatile uint32_t *gpio_in = (volatile uint32_t *)0xd0000004;
+
+    printf("%-15s0x%08x\n", "gpio in", (unsigned)(uintptr_t)gpio_in);
+
+    // уровень вывода светодиода: из регистра напрямую и через SDK
+    printf("  %-13s%u\n", "led bit", (unsigned)((*gpio_in >> led_pin()) & 1u));
+    printf("  %-13s%u\n", "gpio_get", (unsigned)gpio_get(led_pin()));
 }

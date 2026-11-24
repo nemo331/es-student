@@ -62,10 +62,8 @@ void cmd_fw_info(void)
     fw_info();
 }
 
-//void dev_info(void)
-//{
-  //  dev_info();
-//}
+
+
 
 const struct command_t commands[] = {
     { "enable", cmd_enable },
@@ -76,6 +74,7 @@ const struct command_t commands[] = {
     { "mem_info", cmd_mem_info },
     { "fw_info", cmd_fw_info },
     { "dev_info", dev_info },
+    { "boot_info", boot_info },
 };
 
 const uint command_count = sizeof(commands) / sizeof(commands[0]);
