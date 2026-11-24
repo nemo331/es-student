@@ -1,0 +1,26 @@
+задание: 2.2.1
+проект: 221-command-time
+устройство: 2e8a:000a
+серийный номер: 5303284740DF8F1C
+порт: COM7
+начало: 2026-11-24T21:34:53
+   0.000 --> clk_info
+   0.172 <-- clk_info
+   0.179 <-- dbg read_line:130 got clk_info
+   0.187 <-- signal     set khz measured khz
+   0.194 <-- clk_ref      12000        12001
+   0.200 <-- clk_sys     125000       125000
+   0.202 <-- clk_peri    125000       125000
+   0.207 <-- clk_usb      48000        48000
+   0.210 <-- clk_adc      48000        48000
+   0.213 <-- rosc             -         5323
+   2.058 --> info
+   2.159 <-- info
+   2.165 <-- dbg read_line:130 got info
+   2.173 <-- project: 221-command-time
+   2.182 <-- repo: https://github.com/nemo331/es-student
+   2.186 <-- board: pico
+   2.193 <-- serial: 5303284740DF8F1C
+   2.198 <-- chip: manufacturer 0x927, part 0x0002, revision 2
+   2.200 <-- pico-sdk: 2.3.0
+итог: отправлено команд 2, принято строк 17
