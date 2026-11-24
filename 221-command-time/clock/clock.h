@@ -1,6 +1,4 @@
-#ifndef CLOCK_H
-#define CLOCK_H
+#pragma once
 
 void clk_info(void);
-
-#endif
+void uptime(void);

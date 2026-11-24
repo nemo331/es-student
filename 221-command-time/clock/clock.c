@@ -33,3 +33,15 @@ void clk_info(void)
     printf("%-8s %9s %12u\n", "rosc", "-",
            (unsigned)frequency_count_khz(CLOCKS_FC0_SRC_VALUE_ROSC_CLKSRC));
 }
+
+void uptime(void)
+{
+    printf("uptime: %llu ms\n", time_us_64() / 1000);
+}
+
+
+/*void uptime(void)
+{
+    printf("uptime %u ms\n",
+           (unsigned)to_ms_since_boot(get_absolute_time()));
+}*/
