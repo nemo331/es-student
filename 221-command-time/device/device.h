@@ -17,6 +17,7 @@
 
 struct info_t
 {
+   
     uint32_t version;
     char     name[13];
     uint8_t  revision;

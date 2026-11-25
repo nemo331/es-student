@@ -41,6 +41,7 @@ void cmd_fw_info(void)
     fw_info();
 }
 
+
 void cmd_clk_info(void)
 {
     clk_info();
@@ -50,6 +51,18 @@ void cmd_uptime(void)
 {
     // монотонное время с момента сброса, в миллисекундах
     uptime();
+}
+
+void cmd_clk_sys_low(void)
+{
+    // понижаем частоту ядра до CLK_SYS_LOW_KHZ
+    clk_sys_low();
+}
+
+void cmd_clk_sys_default(void)
+{
+    // возвращаем частоту ядра к рабочей SYS_CLK_KHZ
+    clk_sys_default();
 }
 
 // прикидка: за член ряда 4 операции с double, 175 + 110 + 190 + 110 = 585 тактов;
@@ -111,6 +124,8 @@ const struct command_t commands[] = {
     { "calc_pi", cmd_calc_pi },
     { "main_time_exec", cmd_main_time_exec },
     { "main_time_reset", cmd_main_time_reset },
+    { "clk_sys_low", cmd_clk_sys_low },
+    { "clk_sys_default", cmd_clk_sys_default },
 };
 
 const uint command_count = sizeof(commands) / sizeof(commands[0]);
