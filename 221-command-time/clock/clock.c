@@ -39,9 +39,3 @@ void uptime(void)
     printf("uptime: %llu ms\n", time_us_64() / 1000);
 }
 
-
-/*void uptime(void)
-{
-    printf("uptime %u ms\n",
-           (unsigned)to_ms_since_boot(get_absolute_time()));
-}*/

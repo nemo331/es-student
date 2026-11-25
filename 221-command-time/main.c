@@ -52,6 +52,40 @@ void cmd_uptime(void)
     uptime();
 }
 
+// прикидка: за член ряда 4 операции с double, 175 + 110 + 190 + 110 = 585 тактов;
+// 1 000 000 членов по 585 тактов при 125 МГц — около 4,7 с
+const uint CALC_PI_TERMS = 1000000;
+
+double calc_pi(uint terms)
+{
+    // сумма ряда и знак очередного члена, оба double
+    double sum = 0.0;
+    double sign = 1.0;
+
+    // для k от 0 до terms: прибавить к сумме sign / (2k + 1) и сменить знак
+    for (uint k = 0; k < terms; k++)
+    {
+        sum += sign / (2 * k + 1);
+        sign = -sign;
+    }
+
+    // вернуть сумму, умноженную на 4
+    return sum * 4.0;
+}
+
+volatile double pi_result;
+
+void cmd_calc_pi(void)
+{
+    uint64_t start_us = time_us_64();
+    pi_result = calc_pi(CALC_PI_TERMS);
+    uint64_t spent_us = time_us_64() - start_us;
+
+    printf("pi: %.8f\n", pi_result);
+    printf("time: %llu ms\n", spent_us / 1000);
+}
+
+
 const struct command_t commands[] = {
     { "info", cmd_info },
     { "version", cmd_version },
@@ -62,6 +96,7 @@ const struct command_t commands[] = {
     { "boot_info", boot_info },
     { "clk_info", cmd_clk_info },
     { "uptime", cmd_uptime },
+    { "calc_pi", cmd_calc_pi },
 };
 
 const uint command_count = sizeof(commands) / sizeof(commands[0]);
