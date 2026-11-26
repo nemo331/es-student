@@ -4,6 +4,7 @@
 #include "stdio-text-protocol.h"
 #include "api.h"
 #include "button-task.h"
+#include "pi-task.h"
 
 int main()
 {
@@ -21,18 +22,19 @@ int main()
 
     stdio_text_protocol_init();
 
+    pi_task_init();
+
     while (1)
     {
-        // учитываем прошлую итерацию
         profiling_iteration();
 
-        // задача светодиода
         led_task_handle();
 
-        // задача кнопки
         button_task_handle();
 
-        // принятая строка становится командой, команда — действием прибора
+        // задача расчёта: считает порцию членов ряда
+        pi_task_handle();
+
         const command_t *command = stdio_text_protocol_handle();
 
         if (command != NULL)

@@ -8,6 +8,7 @@
 #include "profiling.h"
 #include "led-task.h"
 #include "button-task.h"
+#include "pi-task.h"
 
 // тип обработчика: команда приходит целиком
 typedef void (*api_callback_t)(const command_t *command);
@@ -60,36 +61,17 @@ static void cmd_uptime(const command_t *command)
 
 // прикидка: за член ряда 4 операции с double, 175 + 110 + 190 + 110 = 585 тактов;
 // 1 000 000 членов по 585 тактов при 125 МГц — около 4,7 с
-const uint CALC_PI_TERMS = 1000000;
+const uint32_t PI_DEFAULT_TERMS = 1000000;
 
-static double calc_pi(uint terms)
-{
-    // сумма ряда и знак очередного члена, оба double
-    double sum = 0.0;
-    double sign = 1.0;
-
-    // для k от 0 до terms: прибавить к сумме sign / (2k + 1) и сменить знак
-    for (uint k = 0; k < terms; k++)
-    {
-        sum += sign / (2 * k + 1);
-        sign = -sign;
-    }
-
-    // вернуть сумму, умноженную на 4
-    return sum * 4.0;
-}
-
-volatile double pi_result;
-
-static void cmd_calc_pi(const command_t *command)
+static void cmd_pi_start(const command_t *command)
 {
     // число членов ряда — необязательный аргумент
-    uint32_t terms = CALC_PI_TERMS;
+    uint32_t terms = (uint32_t)PI_DEFAULT_TERMS;
 
     if (command->argc > 1)
     {
         // лишние аргументы
-        printf("error: usage calc_pi [terms]\n");
+        printf("error: usage pi_start [terms]\n");
         return;
     }
 
@@ -98,7 +80,7 @@ static void cmd_calc_pi(const command_t *command)
         if (!parse_u32(command->argv[0], &terms))
         {
             // неверная запись числа
-            printf("error: usage calc_pi [terms]\n");
+            printf("error: usage pi_start [terms]\n");
             return;
         }
 
@@ -109,12 +91,41 @@ static void cmd_calc_pi(const command_t *command)
         }
     }
 
-    uint64_t start_us = time_us_64();
-    pi_result = calc_pi(terms);
-    uint64_t spent_us = time_us_64() - start_us;
+    if (!pi_task_start(terms))
+    {
+        // расчёт уже идёт
+        printf("error: pi is busy\n");
+        return;
+    }
 
-    printf("pi: %.9f\n", pi_result);
-    printf("time: %llu ms\n", spent_us / 1000);
+    printf("pi: started, %u terms\n", (unsigned)terms);
+}
+
+static void cmd_pi(const command_t *command)
+{
+    switch (pi_task_get_state())
+    {
+    case PI_STATE_NOT_STARTED:
+        printf("pi: not started\n");
+        break;
+
+    case PI_STATE_RUNNING:
+        printf("pi: running\n");
+        break;
+
+    case PI_STATE_DONE:
+    {
+        double value = 0.0;
+        uint32_t elapsed_ms = 0;
+
+        if (pi_task_get_result(&value, &elapsed_ms))
+        {
+            printf("pi: %.9f in %u ms\n", value, (unsigned)elapsed_ms);
+        }
+
+        break;
+    }
+    }
 }
 
 static void cmd_main_time_exec(const command_t *command)
@@ -198,6 +209,8 @@ static void cmd_led_period(const command_t *command)
     print_led();
 }
 
+// ---- команда кнопки ----
+
 static void cmd_button(const command_t *command)
 {
     printf("button: %s, presses %u\n",
@@ -210,15 +223,15 @@ static void cmd_button(const command_t *command)
 static const api_command_t api_commands[] = {
     { "info",            "print device passport",                              cmd_info },
     { "uptime",          "print milliseconds since reset",                     cmd_uptime },
-    { "calc_pi",         "compute pi by Leibniz series; optional arg: terms",  cmd_calc_pi },
+    { "pi_start",        "start pi computation; optional arg: terms",          cmd_pi_start },
+    { "pi",              "report pi computation result or state",              cmd_pi },
     { "main_time_exec",  "print superloop iteration average and maximum time", cmd_main_time_exec },
     { "main_time_reset", "reset iteration maximum",                            cmd_main_time_reset },
     { "led_enable",      "turn the led on",                                    cmd_led_enable },
     { "led_disable",     "turn the led off",                                   cmd_led_disable },
     { "led_blink",       "blink the led",                                      cmd_led_blink },
     { "led_period",      "set blink period in ms; arg: period_ms > 0",         cmd_led_period },
-    { "button", "report button state and press count", cmd_button },
-
+    { "button",          "report button state and press count",                cmd_button },
 };
 
 #define API_COMMAND_COUNT (sizeof(api_commands) / sizeof(api_commands[0]))
@@ -257,5 +270,3 @@ void api_handle(const command_t *command)
 
     printf("error: unknown command '%s', try help\n", command->name);
 }
-
-
