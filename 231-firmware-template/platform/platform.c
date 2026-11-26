@@ -1,5 +1,5 @@
-#include "pico/stdlib.h"
 #include "platform/platform.h"
+#include "pico/stdlib.h"
 
 // выводы прибора: их знает только этот файл
 #define PLATFORM_LED_PIN    PICO_DEFAULT_LED_PIN
