@@ -47,30 +47,34 @@ static bool parse_u32(const char *text, uint32_t *value)
 
 // ---- обработчики ----
 
+// паспорт печатает обработчик, модуль только отдаёт данные
 static void cmd_info(const command_t *command)
 {
-    // паспорт устройства
-    device_info();
+    device_info_t info;
+    device_get_info(&info);
+
+    printf("name: %s\n", DEVICE_NAME);
+    printf("version: %s\n", FIRMWARE_VERSION);
+    printf("project: %s\n", DEVICE_PROJECT);
+    printf("repo: %s\n", DEVICE_REPO);
+    printf("board: %s\n", info.board);
+    printf("serial: %s\n", info.serial);
+    printf("chip: manufacturer 0x%03x, part 0x%04x, revision %u\n",
+           (unsigned)info.manufacturer, (unsigned)info.part, (unsigned)info.revision);
+    printf("pico-sdk: %s\n", info.sdk);
 }
 
 static void cmd_uptime(const command_t *command)
 {
-    // монотонное время с момента сброса, в миллисекундах
     printf("uptime: %llu ms\n", time_us_64() / 1000);
 }
 
-// прикидка: за член ряда 4 операции с double, 175 + 110 + 190 + 110 = 585 тактов;
-// 1 000 000 членов по 585 тактов при 125 МГц — около 4,7 с
-const uint32_t PI_DEFAULT_TERMS = 1000000;
-
 static void cmd_pi_start(const command_t *command)
 {
-    // число членов ряда — необязательный аргумент
-    uint32_t terms = (uint32_t)PI_DEFAULT_TERMS;
+    uint32_t terms = 1000000;
 
     if (command->argc > 1)
     {
-        // лишние аргументы
         printf("error: usage pi_start [terms]\n");
         return;
     }
@@ -79,7 +83,6 @@ static void cmd_pi_start(const command_t *command)
     {
         if (!parse_u32(command->argv[0], &terms))
         {
-            // неверная запись числа
             printf("error: usage pi_start [terms]\n");
             return;
         }
@@ -93,7 +96,6 @@ static void cmd_pi_start(const command_t *command)
 
     if (!pi_task_start(terms))
     {
-        // расчёт уже идёт
         printf("error: pi is busy\n");
         return;
     }
@@ -128,22 +130,32 @@ static void cmd_pi(const command_t *command)
     }
 }
 
-static void cmd_main_time_exec(const command_t *command)
+// все секундомеры разом; строка каждого — как в приложении Б
+static void cmd_profiling(const command_t *command)
 {
-    // среднее и максимум длительности итерации суперцикла
-    printf("iteration avg %.2f us, max %u us\n",
-           profiling_avg_us(), (unsigned)profiling_max_us());
+    for (uint32_t i = 0; i < PROFILING_STOPWATCH_COUNT; i++)
+    {
+        profiling_result_t result;
+
+        if (profiling_get(i, &result))
+        {
+            printf("%-9s count %-9u mean %.2f us  max %u us\n",
+                   result.name,
+                   (unsigned)result.count,
+                   result.mean_us,
+                   (unsigned)result.max_us);
+        }
+    }
 }
 
-static void cmd_main_time_reset(const command_t *command)
+static void cmd_profiling_reset(const command_t *command)
 {
-    profiling_reset_max();
-    printf("max reset\n");
+    profiling_reset();
+    printf("profiling reset\n");
 }
 
 // ---- команды светодиода ----
 
-// ответ всех команд светодиода: led: blink, period 1000 ms
 static void print_led(void)
 {
     const char *name;
@@ -204,7 +216,6 @@ static void cmd_led_period(const command_t *command)
         return;
     }
 
-    // период применяется и в состоянии «горит»: начнёт мигать — уже новым периодом
     led_task_set_period_ms(period_ms);
     print_led();
 }
@@ -221,31 +232,29 @@ static void cmd_button(const command_t *command)
 // ---- таблица команд ----
 
 static const api_command_t api_commands[] = {
-    { "info",            "print device passport",                              cmd_info },
-    { "uptime",          "print milliseconds since reset",                     cmd_uptime },
-    { "pi_start",        "start pi computation; optional arg: terms",          cmd_pi_start },
-    { "pi",              "report pi computation result or state",              cmd_pi },
-    { "main_time_exec",  "print superloop iteration average and maximum time", cmd_main_time_exec },
-    { "main_time_reset", "reset iteration maximum",                            cmd_main_time_reset },
-    { "led_enable",      "turn the led on",                                    cmd_led_enable },
-    { "led_disable",     "turn the led off",                                   cmd_led_disable },
-    { "led_blink",       "blink the led",                                      cmd_led_blink },
-    { "led_period",      "set blink period in ms; arg: period_ms > 0",         cmd_led_period },
-    { "button",          "report button state and press count",                cmd_button },
+    { "info",             "print device passport",                              cmd_info },
+    { "uptime",           "print milliseconds since reset",                     cmd_uptime },
+    { "pi_start",         "start pi computation; optional arg: terms",          cmd_pi_start },
+    { "pi",               "report pi computation result or state",              cmd_pi },
+    { "profiling",        "print all stopwatches: count, mean, max",            cmd_profiling },
+    { "profiling_reset",  "reset all stopwatches",                              cmd_profiling_reset },
+    { "led_enable",       "turn the led on",                                    cmd_led_enable },
+    { "led_disable",      "turn the led off",                                   cmd_led_disable },
+    { "led_blink",        "blink the led",                                      cmd_led_blink },
+    { "led_period",       "set blink period in ms; arg: period_ms > 0",         cmd_led_period },
+    { "button",           "report button state and press count",                cmd_button },
 };
 
 #define API_COMMAND_COUNT (sizeof(api_commands) / sizeof(api_commands[0]))
 
 void api_handle(const command_t *command)
 {
-    // команда принята не целиком — выполнять нельзя
     if (command->truncated)
     {
         printf("error: command longer than 63 characters or 4 arguments\n");
         return;
     }
 
-    // help выполняется сам: справка берётся из таблицы
     if (strcmp(command->name, "help") == 0)
     {
         printf("help: print this list\n");
@@ -258,7 +267,6 @@ void api_handle(const command_t *command)
         return;
     }
 
-    // ищем команду в таблице
     for (uint i = 0; i < API_COMMAND_COUNT; i++)
     {
         if (strcmp(command->name, api_commands[i].name) == 0)
