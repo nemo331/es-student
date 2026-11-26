@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <errno.h>
-#include "pico/stdlib.h"
-#include "api.h"
-#include "device.h"
-#include "profiling.h"
+
+#include "device/device.h"
+#include "profiling/profiling.h"
+#include "systime/systime.h"
+
 #include "led-task.h"
 #include "button-task.h"
 #include "pi-task.h"
+#include "firmware.h"
+#include "api.h"
 
 // тип обработчика: команда приходит целиком
 typedef void (*api_callback_t)(const command_t *command);
@@ -20,8 +24,6 @@ typedef struct
     const char *help;
     api_callback_t callback;
 } api_command_t;
-
-// ---- разбор числа ----
 
 // разбирает десятичное число целиком: без хвоста, без переполнения, без пустой строки
 static bool parse_u32(const char *text, uint32_t *value)
@@ -47,16 +49,18 @@ static bool parse_u32(const char *text, uint32_t *value)
 
 // ---- обработчики ----
 
-// паспорт печатает обработчик, модуль только отдаёт данные
 static void cmd_info(const command_t *command)
 {
+    (void)command;
+
     device_info_t info;
     device_get_info(&info);
 
-    printf("name: %s\n", DEVICE_NAME);
+    // паспорт начинается с имени и версии — так требует приложение Б
+    printf("name: %s\n", FIRMWARE_NAME);
     printf("version: %s\n", FIRMWARE_VERSION);
-    printf("project: %s\n", DEVICE_PROJECT);
-    printf("repo: %s\n", DEVICE_REPO);
+    printf("project: %s\n", FIRMWARE_PROJECT);
+    printf("repo: %s\n", FIRMWARE_REPO);
     printf("board: %s\n", info.board);
     printf("serial: %s\n", info.serial);
     printf("chip: manufacturer 0x%03x, part 0x%04x, revision %u\n",
@@ -66,16 +70,20 @@ static void cmd_info(const command_t *command)
 
 static void cmd_uptime(const command_t *command)
 {
-    printf("uptime: %llu ms\n", time_us_64() / 1000);
+    (void)command;
+    printf("uptime: %llu ms\n", (unsigned long long)systime_ms());
 }
 
-static void cmd_pi_start(const command_t *command)
+static void cmd_calc_pi(const command_t *command)
 {
-    uint32_t terms = 1000000;
+    // число членов ряда — необязательный аргумент; argc считает только
+    // аргументы, имя команды в них не входит
+    uint32_t terms = PI_TASK_DEFAULT_TERMS;
 
     if (command->argc > 1)
     {
-        printf("error: usage pi_start [terms]\n");
+        // лишние аргументы
+        printf("error: usage calc_pi [terms]\n");
         return;
     }
 
@@ -83,7 +91,8 @@ static void cmd_pi_start(const command_t *command)
     {
         if (!parse_u32(command->argv[0], &terms))
         {
-            printf("error: usage pi_start [terms]\n");
+            // неверная запись числа
+            printf("error: usage calc_pi [terms]\n");
             return;
         }
 
@@ -94,172 +103,117 @@ static void cmd_pi_start(const command_t *command)
         }
     }
 
-    if (!pi_task_start(terms))
+    // расчёт выполнит задача в очередном обороте цикла
+    pi_task_request(terms);
+}
+
+static void cmd_led(const command_t *command)
+{
+    (void)command;
+    led_task_next_state();
+}
+
+static void cmd_led_period(const command_t *command)
+{
+    // период в миллисекундах — обязательный аргумент
+    if (command->argc != 1)
     {
-        printf("error: pi is busy\n");
+        printf("error: usage led_period <ms>\n");
         return;
     }
 
-    printf("pi: started, %u terms\n", (unsigned)terms);
+    uint32_t period;
+
+    if (!parse_u32(command->argv[0], &period))
+    {
+        printf("error: usage led_period <ms>\n");
+        return;
+    }
+
+    if (!led_task_set_period_ms(period))
+    {
+        printf("error: led_period: period must be greater than zero\n");
+        return;
+    }
+
+    printf("led_period: %u ms\n", (unsigned)period);
 }
 
-static void cmd_pi(const command_t *command)
+static void cmd_button(const command_t *command)
 {
-    switch (pi_task_get_state())
-    {
-    case PI_STATE_NOT_STARTED:
-        printf("pi: not started\n");
-        break;
-
-    case PI_STATE_RUNNING:
-        printf("pi: running\n");
-        break;
-
-    case PI_STATE_DONE:
-    {
-        double value = 0.0;
-        uint32_t elapsed_ms = 0;
-
-        if (pi_task_get_result(&value, &elapsed_ms))
-        {
-            printf("pi: %.9f in %u ms\n", value, (unsigned)elapsed_ms);
-        }
-
-        break;
-    }
-    }
+    (void)command;
+    printf("button: %s, presses %u\n",
+           button_task_is_pressed() ? "pressed" : "released",
+           (unsigned)button_task_get_press_count());
 }
 
-// все секундомеры разом; строка каждого — как в приложении Б
+// ---- команда профилирования с выключателем ----
+
 static void cmd_profiling(const command_t *command)
 {
+    (void)command;
+
+#if PROFILING_ENABLED
     for (uint32_t i = 0; i < PROFILING_STOPWATCH_COUNT; i++)
     {
         profiling_result_t result;
 
         if (profiling_get(i, &result))
         {
-            printf("%-9s count %-9u mean %.2f us  max %u us\n",
+            printf("%-9s count %-9u mean %.2f us max %u us\n",
                    result.name,
                    (unsigned)result.count,
                    result.mean_us,
                    (unsigned)result.max_us);
         }
     }
+#else
+    printf("profiling is disabled in this build\n");
+#endif
 }
 
 static void cmd_profiling_reset(const command_t *command)
 {
+    (void)command;
+
+#if PROFILING_ENABLED
     profiling_reset();
     printf("profiling reset\n");
-}
-
-// ---- команды светодиода ----
-
-static void print_led(void)
-{
-    const char *name;
-
-    switch (led_task_get_state())
-    {
-    case LED_STATE_OFF:
-        name = "off";
-        break;
-
-    case LED_STATE_ON:
-        name = "on";
-        break;
-
-    case LED_STATE_BLINK:
-        name = "blink";
-        break;
-
-    default:
-        name = "?";
-        break;
-    }
-
-    printf("led: %s, period %u ms\n", name, (unsigned)led_task_get_period_ms());
-}
-
-static void cmd_led_enable(const command_t *command)
-{
-    led_task_set_state(LED_STATE_ON);
-    print_led();
-}
-
-static void cmd_led_disable(const command_t *command)
-{
-    led_task_set_state(LED_STATE_OFF);
-    print_led();
-}
-
-static void cmd_led_blink(const command_t *command)
-{
-    led_task_set_state(LED_STATE_BLINK);
-    print_led();
-}
-
-static void cmd_led_period(const command_t *command)
-{
-    uint32_t period_ms;
-
-    if (command->argc != 1 || !parse_u32(command->argv[0], &period_ms))
-    {
-        printf("error: usage led_period <period_ms>\n");
-        return;
-    }
-
-    if (period_ms == 0)
-    {
-        printf("error: period must be greater than zero\n");
-        return;
-    }
-
-    led_task_set_period_ms(period_ms);
-    print_led();
-}
-
-// ---- команда кнопки ----
-
-static void cmd_button(const command_t *command)
-{
-    printf("button: %s, presses %u\n",
-           button_task_is_pressed() ? "pressed" : "released",
-           (unsigned)button_task_get_press_count());
+#else
+    printf("profiling is disabled in this build\n");
+#endif
 }
 
 // ---- таблица команд ----
 
 static const api_command_t api_commands[] = {
-    { "info",             "print device passport",                              cmd_info },
-    { "uptime",           "print milliseconds since reset",                     cmd_uptime },
-    { "pi_start",         "start pi computation; optional arg: terms",          cmd_pi_start },
-    { "pi",               "report pi computation result or state",              cmd_pi },
-    { "profiling",        "print all stopwatches: count, mean, max",            cmd_profiling },
-    { "profiling_reset",  "reset all stopwatches",                              cmd_profiling_reset },
-    { "led_enable",       "turn the led on",                                    cmd_led_enable },
-    { "led_disable",      "turn the led off",                                   cmd_led_disable },
-    { "led_blink",        "blink the led",                                      cmd_led_blink },
-    { "led_period",       "set blink period in ms; arg: period_ms > 0",         cmd_led_period },
-    { "button",           "report button state and press count",                cmd_button },
+    { "info",           "print device passport",            cmd_info },
+    { "uptime",         "print milliseconds since reset",   cmd_uptime },
+    { "calc_pi",        "compute pi by Leibniz series; optional arg: number of terms", cmd_calc_pi },
+    { "led",            "switch led to the next state",     cmd_led },
+    { "led_period",     "set blink period in ms: led_period <ms>", cmd_led_period },
+    { "button",         "print button state and press count", cmd_button },
+    { "profiling",      "print stopwatch results",          cmd_profiling },
+    { "profiling_reset","reset stopwatch results",          cmd_profiling_reset },
 };
 
 #define API_COMMAND_COUNT (sizeof(api_commands) / sizeof(api_commands[0]))
 
 void api_handle(const command_t *command)
 {
+    // команда принята не целиком — выполнять нельзя
     if (command->truncated)
     {
         printf("error: command longer than 63 characters or 4 arguments\n");
         return;
     }
 
+    // help выполняется сам: справка берётся из таблицы
     if (strcmp(command->name, "help") == 0)
     {
         printf("help: print this list\n");
 
-        for (uint i = 0; i < API_COMMAND_COUNT; i++)
+        for (uint32_t i = 0; i < API_COMMAND_COUNT; i++)
         {
             printf("  %-16s %s\n", api_commands[i].name, api_commands[i].help);
         }
@@ -267,7 +221,8 @@ void api_handle(const command_t *command)
         return;
     }
 
-    for (uint i = 0; i < API_COMMAND_COUNT; i++)
+    // ищем команду в таблице
+    for (uint32_t i = 0; i < API_COMMAND_COUNT; i++)
     {
         if (strcmp(command->name, api_commands[i].name) == 0)
         {

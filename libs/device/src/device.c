@@ -1,23 +1,30 @@
+#include <stdio.h>
 #include "pico/unique_id.h"
 #include "hardware/regs/addressmap.h"
 #include "hardware/regs/sysinfo.h"
 #include "pico/version.h"
 
-#include "device.h"
+#include "device/device.h"
 
-// заполняет структуру сведениями о плате; печатает вызывающий, не модуль
+#ifndef DEVICE_BOARD
+#define DEVICE_BOARD "pico"
+#endif
+
 void device_get_info(device_info_t *info)
 {
-    info->board = DEVICE_BOARD;
+    if (info == NULL)
+    {
+        return;
+    }
 
     pico_get_unique_board_id_string(info->serial, sizeof(info->serial));
 
     volatile uint32_t *chip_id = (uint32_t *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET);
     uint32_t id = *chip_id;
 
+    info->board        = DEVICE_BOARD;
     info->manufacturer = (id & SYSINFO_CHIP_ID_MANUFACTURER_BITS) >> SYSINFO_CHIP_ID_MANUFACTURER_LSB;
     info->part         = (id & SYSINFO_CHIP_ID_PART_BITS)         >> SYSINFO_CHIP_ID_PART_LSB;
     info->revision     = (id & SYSINFO_CHIP_ID_REVISION_BITS)     >> SYSINFO_CHIP_ID_REVISION_LSB;
-
-    info->sdk = PICO_SDK_VERSION_STRING;
+    info->sdk          = PICO_SDK_VERSION_STRING;
 }

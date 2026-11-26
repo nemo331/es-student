@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "pico/types.h"
 
 void button_task_init(void);
 void button_task_handle(void);

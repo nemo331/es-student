@@ -1,9 +1,6 @@
-#include "profiling.h"
+#include "profiling/profiling.h"
 #include "pico/stdlib.h"
 
-// секунodмеры лежат массивом, адресуются номером — как выводы GPIO номером.
-// Состояние модуля — в переменных файла со static: второй набор секундомеров
-// прибору не нужен
 static const char *names[PROFILING_STOPWATCH_COUNT];
 static uint32_t start_us[PROFILING_STOPWATCH_COUNT];
 static uint32_t sum_us[PROFILING_STOPWATCH_COUNT];
@@ -13,7 +10,7 @@ static bool inited[PROFILING_STOPWATCH_COUNT];
 
 void profiling_stopwatch_init(uint32_t id, const char *name)
 {
-    if (id >= PROFILING_STOPWATCH_COUNT)
+    if (id >= PROFILING_STOPWATCH_COUNT || name == NULL)
     {
         return;
     }
@@ -25,6 +22,8 @@ void profiling_stopwatch_init(uint32_t id, const char *name)
     counts[id] = 0;
     inited[id] = true;
 }
+
+#if PROFILING_ENABLED
 
 void profiling_start(uint32_t id)
 {
@@ -56,9 +55,11 @@ void profiling_stop(uint32_t id)
     }
 }
 
+#endif // PROFILING_ENABLED
+
 bool profiling_get(uint32_t id, profiling_result_t *result)
 {
-    if (id >= PROFILING_STOPWATCH_COUNT || !inited[id])
+    if (id >= PROFILING_STOPWATCH_COUNT || !inited[id] || result == NULL)
     {
         return false;
     }
@@ -66,9 +67,6 @@ bool profiling_get(uint32_t id, profiling_result_t *result)
     result->name = names[id];
     result->count = counts[id];
     result->max_us = max_us[id];
-
-    // среднее арифметическое: деление и float здесь допустимы —
-    // вызов бывает только по команде, а не на каждой итерации
     result->mean_us = counts[id] ? (float)sum_us[id] / (float)counts[id] : 0.0f;
 
     return true;

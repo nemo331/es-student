@@ -1,97 +1,59 @@
-#include "pico/stdlib.h"
-
+#include "systime/systime.h"
 #include "pi-task.h"
+#include <stdio.h>
 
-// цена члена ряда — около 585 тактов, то есть 4,7 мкс при 125 МГц.
-// Порция должна длиться не дольше 0,5 мс = 62 500 тактов, это около ста членов:
-// 100 × 585 = 58 500 тактов ≈ 468 мкс
-#define PI_TERMS_PER_CALL 100
+// прикидка переехала в pi-task.h: её использует и api
 
-// члены ряда бывают до 4 294 967 295 — по Ф5.1 всё в uint32_t
-static pi_state_t state = PI_STATE_NOT_STARTED;
-static uint32_t k = 0;          // номер следующего члена
-static uint32_t terms = 0;      // сколько членов всего
-static double sum = 0.0;
-static double sign = 1.0;
-static uint64_t start_us = 0;
-static uint64_t end_us = 0;
+// запрос расчёта: задача его увидит и выполнит в очередном обороте цикла
+static bool pending = false;
+static uint32_t terms = PI_TASK_DEFAULT_TERMS;
+
+// сумма ряда печатается в отладчик и остаётся доступной после расчёта
+volatile double pi_result;
 
 void pi_task_init(void)
 {
-    state = PI_STATE_NOT_STARTED;
+    pending = false;
+    terms = PI_TASK_DEFAULT_TERMS;
 }
 
-// запускает расчёт; пока идёт расчёт — отказывает
-bool pi_task_start(uint32_t new_terms)
+void pi_task_request(uint32_t new_terms)
 {
-    if (state == PI_STATE_RUNNING)
-    {
-        return false;
-    }
-
     terms = new_terms;
-    k = 0;
-    sum = 0.0;
-    sign = 1.0;
-    start_us = time_us_64();
-    state = PI_STATE_RUNNING;
-
-    return true;
+    pending = true;
 }
 
-pi_state_t pi_task_get_state(void)
+// ряд Лейбница: 4*(1 - 1/3 + 1/5 - ...)
+static double calc_pi(uint32_t count)
 {
-    return state;
-}
+    // сумма ряда и знак очередного члена, оба double
+    double sum = 0.0;
+    double sign = 1.0;
 
-// отдаёт результат и время расчёта; до завершения — отказывает
-bool pi_task_get_result(double *value, uint32_t *elapsed_ms)
-{
-    if (state != PI_STATE_DONE)
+    for (uint32_t k = 0; k < count; k++)
     {
-        return false;
+        sum += sign / (2 * k + 1);
+        sign = -sign;
     }
 
-    *value = sum * 4.0;
-    *elapsed_ms = (uint32_t)((end_us - start_us) / 1000);
-
-    return true;
+    // сумма ряда, умноженная на 4
+    return sum * 4.0;
 }
 
 void pi_task_handle(void)
 {
-    // не считаем — ничего не делаем
-    if (state != PI_STATE_RUNNING)
+    // запроса нет — и дела нет
+    if (!pending)
     {
         return;
     }
 
-    // конец порции: сложение pi_k + PI_TERMS_PER_CALL возле 4 294 967 295
-    // не помещается в 32 бита и становится маленьким числом.
-    // Если конец оказался меньше начала — сумма переполнилась,
-    // и концом порции становится последний член
-    uint32_t end = k + PI_TERMS_PER_CALL;
+    pending = false;
 
-    if (end < k)
-    {
-        end = terms;
-    }
+    uint64_t start_us = systime_us();
+    pi_result = calc_pi(terms);
+    uint64_t spent_us = systime_us() - start_us;
 
-    if (end > terms)
-    {
-        end = terms;
-    }
-
-    for (; k < end; k++)
-    {
-        sum += sign / (2.0 * k + 1.0);
-        sign = -sign;
-    }
-
-    // все члены посчитаны — фиксируем время и состояние
-    if (k >= terms)
-    {
-        end_us = time_us_64();
-        state = PI_STATE_DONE;
-    }
+    printf("pi: %.9f\n", pi_result);
+    printf("time: %llu ms\n", (unsigned long long)(spent_us / 1000));
 }

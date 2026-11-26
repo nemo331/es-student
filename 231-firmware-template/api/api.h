@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdio-text-protocol.h"
+#include "stdio-text-protocol/stdio-text-protocol.h"
 
-// принимает разобранную команду и выполняет её по таблице
+// находит команду в таблице и выполняет её обработчик
 void api_handle(const command_t *command);

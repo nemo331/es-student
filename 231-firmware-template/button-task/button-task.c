@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
+#include "systime/systime.h"
 
 #include "button-task.h"
 #include "led-task.h"
@@ -8,8 +9,7 @@
 #define BUTTON_PIN 15
 
 // время дребезга: механический контакт прыгает несколько миллисекунд,
-// порог 20 мс перекрывает это время с запасом
-
+// порог 20 мс перекрывает это время с запасом (20000 мкс)
 #define BOUNCE_US 20000
 
 // состояния кнопки: отпущена, ждём подтверждения нажатия, нажата,
@@ -35,7 +35,7 @@ void button_task_init(void)
     button_state = BUTTON_STATE_RELEASED;
     pressed = false;
     press_count = 0;
-    edge_us = time_us_64();
+    edge_us = systime_us();
 }
 
 void button_task_handle(void)
@@ -43,7 +43,7 @@ void button_task_handle(void)
     // читаем уровень: нажатая кнопка замыкает вывод на землю и даёт ноль
     bool level = (gpio_get(BUTTON_PIN) == 0);
     // читаем часы
-    uint64_t now_us = time_us_64();
+    uint64_t now_us = systime_us();
 
     switch (button_state)
     {

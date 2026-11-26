@@ -1,37 +1,13 @@
 #include "pico/stdlib.h"
+#include "systime/systime.h"
 #include "led-task.h"
 
-// выводом светодиода владеет задача, модуль led больше не существует
+// выводом светодиода владеет задача
 static const uint LED_TASK_PIN = PICO_DEFAULT_LED_PIN;
 
 static led_state_t led_state = LED_STATE_BLINK;
 static uint32_t period_ms = 1000;
 static uint64_t last_toggle_us = 0;
-
-// проверка периода: следующее срабатывание отсчитывается от прошлого,
-// а не от текущего момента — переключения не уползают от сетки периода.
-// Если прибор отстал больше чем на период, пропущенные срабатывания
-// не догоняются, а отсчёт начинается заново (Ф3.4)
-static bool period_elapsed(uint64_t *last_us, uint64_t period_us)
-{
-    uint32_t now_us = time_us_32();
-
-    if (now_us - *last_us < period_us)
-    {
-        return false;
-    }
-
-    // от прошлого срабатывания, а не от «сейчас»
-    *last_us += period_us;
-
-    // отстали больше чем на период — не догоняем, начинаем заново
-    if (now_us - *last_us >= period_us)
-    {
-        *last_us = now_us;
-    }
-
-    return true;
-}
 
 void led_task_init(void)
 {
@@ -41,7 +17,7 @@ void led_task_init(void)
     gpio_put(LED_TASK_PIN, false);
 
     period_ms = 1000;
-    last_toggle_us = time_us_64();
+    last_toggle_us = systime_us();
 
     // первое переключение сразу: светодиод загорается при старте
     led_state = LED_STATE_BLINK;
@@ -66,7 +42,7 @@ void led_task_set_state(led_state_t state)
     case LED_STATE_BLINK:
         // первое переключение сразу: светодиод загорается, отсчёт заново
         gpio_put(LED_TASK_PIN, true);
-        last_toggle_us = time_us_64();
+        last_toggle_us = systime_us();
         break;
     }
 }
@@ -104,7 +80,7 @@ void led_task_handle(void)
 
     // «мигает» — каждые полпериода переключаем светодиод
     case LED_STATE_BLINK:
-        if (period_elapsed(&last_toggle_us, (uint64_t)period_ms * 1000 / 2))
+        if (systime_period_elapsed(&last_toggle_us, (uint64_t)period_ms * 1000 / 2))
         {
             gpio_xor_mask(1u << LED_TASK_PIN);
         }
@@ -112,8 +88,7 @@ void led_task_handle(void)
     }
 }
 
-// переводит светодиод в следующее состояние по кругу,
-// начиная с текущего
+// переводит светодиод в следующее состояние по кругу, начиная с текущего
 void led_task_next_state(void)
 {
     switch (led_state)

@@ -3,12 +3,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// по умолчанию профилирование включено
+#ifndef PROFILING_ENABLED
+#define PROFILING_ENABLED 1
+#endif
+
 // секундомеров в приборе; номера выбирает main.c
 #define PROFILING_STOPWATCH_COUNT 5
 
 // сумма замеров хранится в 32 битах: это 2^32 микросекунд,
-// один секундомер переполнится только через 71 минуту непрерывного счёта.
-// Дешевле 64 бит, а дольше жизни одной сессии итерации хватает
+// секундомер переполнится только через 71 минуту непрерывного счёта
 
 // результат одного секундомера: имя, число замеров, среднее и максимум (мкс)
 typedef struct
@@ -20,7 +24,16 @@ typedef struct
 } profiling_result_t;
 
 void profiling_stopwatch_init(uint32_t id, const char *name);
+
+#if PROFILING_ENABLED
 void profiling_start(uint32_t id);
 void profiling_stop(uint32_t id);
+#else
+// профилирование выключено: вызовы ничего не делают
+#define profiling_start(id) ((void)0)
+#define profiling_stop(id) ((void)0)
+#endif
+
+// false — секундомер с таким номером не заведён
 bool profiling_get(uint32_t id, profiling_result_t *result);
 void profiling_reset(void);

@@ -1,0 +1,6 @@
+# каждая библиотека описывает свою сборку сама
+add_subdirectory(stdio-text-protocol)
+add_subdirectory(systime)
+add_subdirectory(profiling)
+add_subdirectory(device)
+add_subdirectory(logging)
