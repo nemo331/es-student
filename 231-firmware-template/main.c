@@ -3,6 +3,7 @@
 #include "profiling.h"
 #include "stdio-text-protocol.h"
 #include "api.h"
+#include "button-task.h"
 
 int main()
 {
@@ -11,6 +12,9 @@ int main()
 
     // задача светодиода: настраивает вывод, период 1000 мс, состояние «мигает»
     led_task_init();
+
+    // задача кнопки: вывод на вход с подтяжкой, машина дребезга
+    button_task_init();
 
     // запоминаем начальное показание часов для профилирования
     profiling_init();
@@ -24,6 +28,9 @@ int main()
 
         // задача светодиода
         led_task_handle();
+
+        // задача кнопки
+        button_task_handle();
 
         // принятая строка становится командой, команда — действием прибора
         const command_t *command = stdio_text_protocol_handle();

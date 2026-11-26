@@ -7,6 +7,7 @@
 #include "device.h"
 #include "profiling.h"
 #include "led-task.h"
+#include "button-task.h"
 
 // тип обработчика: команда приходит целиком
 typedef void (*api_callback_t)(const command_t *command);
@@ -197,6 +198,13 @@ static void cmd_led_period(const command_t *command)
     print_led();
 }
 
+static void cmd_button(const command_t *command)
+{
+    printf("button: %s, presses %u\n",
+           button_task_is_pressed() ? "pressed" : "released",
+           (unsigned)button_task_get_press_count());
+}
+
 // ---- таблица команд ----
 
 static const api_command_t api_commands[] = {
@@ -209,6 +217,8 @@ static const api_command_t api_commands[] = {
     { "led_disable",     "turn the led off",                                   cmd_led_disable },
     { "led_blink",       "blink the led",                                      cmd_led_blink },
     { "led_period",      "set blink period in ms; arg: period_ms > 0",         cmd_led_period },
+    { "button", "report button state and press count", cmd_button },
+
 };
 
 #define API_COMMAND_COUNT (sizeof(api_commands) / sizeof(api_commands[0]))
@@ -247,3 +257,5 @@ void api_handle(const command_t *command)
 
     printf("error: unknown command '%s', try help\n", command->name);
 }
+
+
