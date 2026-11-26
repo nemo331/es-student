@@ -12,6 +12,9 @@
 #define DEVICE_PROJECT "231-firmware-template"
 #define DEVICE_REPO "https://github.com/nemo331/es-student"
 
+
+void device_info(void);
+
 #ifndef DEVICE_BOARD
 #define DEVICE_BOARD "unknown"
 #endif
