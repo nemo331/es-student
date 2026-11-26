@@ -1,59 +1,97 @@
+#include <stdio.h>
 #include "systime/systime.h"
 #include "pi-task.h"
-#include <stdio.h>
 
-// прикидка переехала в pi-task.h: её использует и api
+// прикидка переехала в pi-task.h: её используют и api
 
-// запрос расчёта: задача его увидит и выполнит в очередном обороте цикла
-static bool pending = false;
-static uint32_t terms = PI_TASK_DEFAULT_TERMS;
+// состояние расчёта: не запускался, считает, готово
+static pi_task_state_t state = PI_TASK_NOT_STARTED;
+
+// параметры расчёта
+static uint32_t total_terms = PI_TASK_DEFAULT_TERMS;
+static uint32_t done_terms = 0;
+static double sum = 0.0;
+static double sign = 1.0;
+static uint64_t start_us = 0;
+static uint64_t spent_us = 0;
 
 // сумма ряда печатается в отладчик и остаётся доступной после расчёта
 volatile double pi_result;
 
 void pi_task_init(void)
 {
-    pending = false;
-    terms = PI_TASK_DEFAULT_TERMS;
+    state = PI_TASK_NOT_STARTED;
+    total_terms = PI_TASK_DEFAULT_TERMS;
+    done_terms = 0;
+    sum = 0.0;
+    sign = 1.0;
+    start_us = 0;
+    spent_us = 0;
 }
 
-void pi_task_request(uint32_t new_terms)
+bool pi_task_start(uint32_t new_terms)
 {
-    terms = new_terms;
-    pending = true;
-}
-
-// ряд Лейбница: 4*(1 - 1/3 + 1/5 - ...)
-static double calc_pi(uint32_t count)
-{
-    // сумма ряда и знак очередного члена, оба double
-    double sum = 0.0;
-    double sign = 1.0;
-
-    for (uint32_t k = 0; k < count; k++)
+    // занята — запрос не принимаем
+    if (state == PI_TASK_CALCULATING)
     {
-        sum += sign / (2 * k + 1);
-        sign = -sign;
+        return false;
     }
 
-    // сумма ряда, умноженная на 4
-    return sum * 4.0;
+    total_terms = new_terms;
+    done_terms = 0;
+    sum = 0.0;
+    sign = 1.0;
+    start_us = systime_us();
+    state = PI_TASK_CALCULATING;
+
+    return true;
 }
 
+// ряд Лейбница считают порциями по PI_TERMS_PER_CALL за оборот цикла,
+// чтобы суперцикл оставался отзывчивым между порциями
 void pi_task_handle(void)
 {
-    // запроса нет — и дела нет
-    if (!pending)
+    if (state != PI_TASK_CALCULATING)
     {
         return;
     }
 
-    pending = false;
+    uint32_t until = done_terms + PI_TERMS_PER_CALL;
 
-    uint64_t start_us = systime_us();
-    pi_result = calc_pi(terms);
-    uint64_t spent_us = systime_us() - start_us;
+    if (until > total_terms)
+    {
+        until = total_terms;
+    }
 
-    printf("pi: %.9f\n", pi_result);
-    printf("time: %llu ms\n", (unsigned long long)(spent_us / 1000));
+    for (; done_terms < until; done_terms++)
+    {
+        sum += sign / (2 * done_terms + 1);
+        sign = -sign;
+    }
+
+    // порция дозрела до конца ряда — расчёт готов
+    if (done_terms >= total_terms)
+    {
+        pi_result = sum * 4.0;
+        spent_us = systime_us() - start_us;
+        state = PI_TASK_DONE;
+    }
+}
+
+pi_task_state_t pi_task_get_state(void)
+{
+    return state;
+}
+
+bool pi_task_get_result(double *result, uint64_t *elapsed_us)
+{
+    if (state != PI_TASK_DONE || result == NULL || elapsed_us == NULL)
+    {
+        return false;
+    }
+
+    *result = pi_result;
+    *elapsed_us = spent_us;
+
+    return true;
 }

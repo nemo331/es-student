@@ -74,43 +74,30 @@ static void cmd_uptime(const command_t *command)
     printf("uptime: %llu ms\n", (unsigned long long)systime_ms());
 }
 
-static void cmd_calc_pi(const command_t *command)
-{
-    // число членов ряда — необязательный аргумент; argc считает только
-    // аргументы, имя команды в них не входит
-    uint32_t terms = PI_TASK_DEFAULT_TERMS;
-
-    if (command->argc > 1)
-    {
-        // лишние аргументы
-        printf("error: usage calc_pi [terms]\n");
-        return;
-    }
-
-    if (command->argc == 1)
-    {
-        if (!parse_u32(command->argv[0], &terms))
-        {
-            // неверная запись числа
-            printf("error: usage calc_pi [terms]\n");
-            return;
-        }
-
-        if (terms == 0)
-        {
-            printf("error: terms must be greater than zero\n");
-            return;
-        }
-    }
-
-    // расчёт выполнит задача в очередном обороте цикла
-    pi_task_request(terms);
-}
+// ---- команды светодиода ----
 
 static void cmd_led(const command_t *command)
 {
     (void)command;
     led_task_next_state();
+}
+
+static void cmd_led_enable(const command_t *command)
+{
+    (void)command;
+    led_task_set_state(LED_STATE_ON);
+}
+
+static void cmd_led_disable(const command_t *command)
+{
+    (void)command;
+    led_task_set_state(LED_STATE_OFF);
+}
+
+static void cmd_led_blink(const command_t *command)
+{
+    (void)command;
+    led_task_set_state(LED_STATE_BLINK);
 }
 
 static void cmd_led_period(const command_t *command)
@@ -139,12 +126,83 @@ static void cmd_led_period(const command_t *command)
     printf("led_period: %u ms\n", (unsigned)period);
 }
 
+// ---- команда кнопки ----
+
 static void cmd_button(const command_t *command)
 {
     (void)command;
     printf("button: %s, presses %u\n",
            button_task_is_pressed() ? "pressed" : "released",
            (unsigned)button_task_get_press_count());
+}
+
+// ---- команды расчёта π ----
+
+static void cmd_pi_start(const command_t *command)
+{
+    // число членов ряда — необязательный аргумент; argc считает только
+    // аргументы, имя команды в них не входит
+    uint32_t terms = PI_TASK_DEFAULT_TERMS;
+
+    if (command->argc > 1)
+    {
+        // лишние аргументы
+        printf("error: usage pi_start [terms]\n");
+        return;
+    }
+
+    if (command->argc == 1)
+    {
+        if (!parse_u32(command->argv[0], &terms))
+        {
+            // неверная запись числа
+            printf("error: usage pi_start [terms]\n");
+            return;
+        }
+
+        if (terms == 0)
+        {
+            printf("error: terms must be greater than zero\n");
+            return;
+        }
+    }
+
+    if (!pi_task_start(terms))
+    {
+        printf("error: pi is busy\n");
+        return;
+    }
+
+    printf("pi_start: %u terms\n", (unsigned)terms);
+}
+
+static void cmd_pi(const command_t *command)
+{
+    (void)command;
+
+    switch (pi_task_get_state())
+    {
+    case PI_TASK_NOT_STARTED:
+        printf("pi: not started\n");
+        break;
+
+    case PI_TASK_CALCULATING:
+        printf("pi: calculating\n");
+        break;
+
+    case PI_TASK_DONE:
+    {
+        double result;
+        uint64_t elapsed_us;
+
+        if (pi_task_get_result(&result, &elapsed_us))
+        {
+            printf("pi: %.9f\n", result);
+            printf("time: %llu ms\n", (unsigned long long)(elapsed_us / 1000));
+        }
+        break;
+    }
+    }
 }
 
 // ---- команда профилирования с выключателем ----
@@ -187,14 +245,18 @@ static void cmd_profiling_reset(const command_t *command)
 // ---- таблица команд ----
 
 static const api_command_t api_commands[] = {
-    { "info",           "print device passport",            cmd_info },
-    { "uptime",         "print milliseconds since reset",   cmd_uptime },
-    { "calc_pi",        "compute pi by Leibniz series; optional arg: number of terms", cmd_calc_pi },
-    { "led",            "switch led to the next state",     cmd_led },
-    { "led_period",     "set blink period in ms: led_period <ms>", cmd_led_period },
-    { "button",         "print button state and press count", cmd_button },
-    { "profiling",      "print stopwatch results",          cmd_profiling },
-    { "profiling_reset","reset stopwatch results",          cmd_profiling_reset },
+    { "info",            "print device passport",            cmd_info },
+    { "uptime",          "print milliseconds since reset",   cmd_uptime },
+    { "pi_start",        "start pi calculation; optional arg: number of terms", cmd_pi_start },
+    { "pi",              "print pi calculation state or result", cmd_pi },
+    { "led",             "switch led to the next state",     cmd_led },
+    { "led_enable",      "led on",                           cmd_led_enable },
+    { "led_disable",     "led off",                          cmd_led_disable },
+    { "led_blink",       "led blinking",                     cmd_led_blink },
+    { "led_period",      "set blink period in ms: led_period <ms>", cmd_led_period },
+    { "button",          "print button state and press count", cmd_button },
+    { "profiling",       "print stopwatch results",          cmd_profiling },
+    { "profiling_reset", "reset stopwatch results",          cmd_profiling_reset },
 };
 
 #define API_COMMAND_COUNT (sizeof(api_commands) / sizeof(api_commands[0]))

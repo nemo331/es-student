@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 include(pico_sdk_import.cmake)
 
-project(231_firmware_template C CXX ASM)
+project(231_firmware_template)
 
 pico_sdk_init()
 
@@ -41,5 +41,9 @@ target_link_libraries(231_firmware_template
     logging
     pico_stdlib
 )
+
+
+pico_enable_stdio_usb(231_firmware_template 1)
+pico_enable_stdio_uart(231_firmware_template 0)
 
 pico_add_extra_outputs(231_firmware_template)
