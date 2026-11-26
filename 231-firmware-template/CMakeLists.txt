@@ -9,7 +9,6 @@ pico_sdk_init()
 # предупреждения — всем целям, включая библиотеки; ставим до add_subdirectory()
 add_compile_options(-Wall)
 
-# libs лежит вне папки проекта: второй аргумент задаёт каталог сборки
 add_subdirectory(../libs ${CMAKE_BINARY_DIR}/libs)
 
 # выключатель профилирования: 0 — вызовов секундомеров в образе нет
@@ -17,33 +16,62 @@ target_compile_definitions(profiling PUBLIC
     PROFILING_ENABLED=1
 )
 
-add_executable(231_firmware_template
-    main.c
-    api/api.c
-    led-task/led-task.c
-    button-task/button-task.c
-    pi-task/pi-task.c
+# железо прибора: единственное место проекта с SDK
+add_library(platform STATIC
+    platform/platform.c
 )
-
-target_include_directories(231_firmware_template PRIVATE
+# путь к заголовкам — папка проекта: через него logic находит
+# и platform/platform.h, и firmware.h
+target_include_directories(platform PUBLIC
     .
-    api
-    led-task
-    button-task
-    pi-task
+)
+# SDK platform подключает только для себя
+target_link_libraries(platform PRIVATE
+    pico_stdlib
 )
 
-target_link_libraries(231_firmware_template
+# логика прибора: задачи и команды, без SDK
+add_library(logic STATIC
+    logic/api/api.c
+    logic/api/api-callbacks.c
+    logic/led-task/led-task.c
+    logic/button-task/button-task.c
+    logic/pi-task/pi-task.c
+)
+# путь к заголовкам — папка logic
+target_include_directories(logic PUBLIC
+    logic
+)
+# протокол — PUBLIC: команда command_t нужна и пользователю api,
+# остальные библиотеки — PRIVATE: SDK наружу не уходит
+target_link_libraries(logic PUBLIC
     stdio_text_protocol
+)
+target_link_libraries(logic PRIVATE
     systime
     profiling
     device
+    platform
+)
+
+add_executable(${PROJECT_NAME}
+    main.c
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    .
+)
+
+target_link_libraries(${PROJECT_NAME}
+    logic
+    platform
+    profiling
     logging
     pico_stdlib
 )
 
 
-pico_enable_stdio_usb(231_firmware_template 1)
-pico_enable_stdio_uart(231_firmware_template 0)
+pico_enable_stdio_usb(${PROJECT_NAME} 1)
+pico_enable_stdio_uart(${PROJECT_NAME} 0)
 
-pico_add_extra_outputs(231_firmware_template)
+pico_add_extra_outputs(${PROJECT_NAME})

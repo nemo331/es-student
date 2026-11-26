@@ -1,15 +1,11 @@
-#include "pico/stdlib.h"
-
-#include "device/device.h"
-#include "logging/log.h"
+#include "platform/platform.h"
+#include "led-task/led-task.h"
+#include "button-task/button-task.h"
+#include "pi-task/pi-task.h"
+#include "api/api.h"
 #include "profiling/profiling.h"
 #include "stdio-text-protocol/stdio-text-protocol.h"
-#include "systime/systime.h"
-
-#include "led-task.h"
-#include "button-task.h"
-#include "pi-task.h"
-#include "api.h"
+#include "logging/log.h"
 #include "firmware.h"
 
 // номера секундомеров выбирает main.c; имена — из приложения Б
@@ -23,18 +19,16 @@ typedef enum {
 
 int main()
 {
-    // инициализируем стандартный ввод-вывод
-    stdio_init_all();
+    // платформа: стандартный ввод-вывод и выводы
+    platform_init();
 
-    // задача светодиода: настраивает вывод, период 1000 мс, состояние «мигает»
+    // задача светодиода: период 1000 мс, состояние «мигает»
     led_task_init();
-
-    // задача кнопки: вывод на вход с подтяжкой, машина дребезга
-    button_task_init();
 
     // задача расчёта π
     pi_task_init();
 
+    // протокол
     stdio_text_protocol_init();
 
     // заводим секундомеры
@@ -47,6 +41,10 @@ int main()
     // имя и версию прошивки выводит main.c; строку в терминале
     // скорее всего не видно — порт ещё не открыт
     LOG_INF("%s %s\n", FIRMWARE_NAME, FIRMWARE_VERSION);
+
+    // нажатие переводит светодиод в следующее состояние:
+    // связь задаёт main.c, задача кнопки не знает led-task
+    button_task_init(led_task_next_state);
 
     while (1)
     {

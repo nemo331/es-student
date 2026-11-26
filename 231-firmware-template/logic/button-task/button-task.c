@@ -1,12 +1,9 @@
-#include "pico/stdlib.h"
-#include "hardware/gpio.h"
+#include "button-task/button-task.h"
+
+#include <stddef.h>
+
 #include "systime/systime.h"
-
-#include "button-task.h"
-#include "led-task.h"
-
-// вывод кнопки: замыкание на землю, поэтому подтяжка к питанию
-#define BUTTON_PIN 15
+#include "platform/platform.h"
 
 // время дребезга: механический контакт прыгает несколько миллисекунд,
 // порог 20 мс перекрывает это время с запасом (20000 мкс)
@@ -21,16 +18,15 @@ typedef enum {
     BUTTON_STATE_RELEASE_WAIT,
 } button_state_t;
 
+static button_task_callback_t on_press = NULL;
 static button_state_t button_state = BUTTON_STATE_RELEASED;
 static uint64_t edge_us = 0;       // момент смены уровня, кандидат на переход
 static uint32_t press_count = 0;
 static bool pressed = false;       // кнопка нажата и в «нажата», и в «отпускание?»
 
-void button_task_init(void)
+void button_task_init(button_task_callback_t callback)
 {
-    gpio_init(BUTTON_PIN);
-    gpio_set_dir(BUTTON_PIN, GPIO_IN);
-    gpio_pull_up(BUTTON_PIN);
+    on_press = callback;
 
     button_state = BUTTON_STATE_RELEASED;
     pressed = false;
@@ -40,8 +36,8 @@ void button_task_init(void)
 
 void button_task_handle(void)
 {
-    // читаем уровень: нажатая кнопка замыкает вывод на землю и даёт ноль
-    bool level = (gpio_get(BUTTON_PIN) == 0);
+    // читаем уровень у платформы: она знает, что нажатие даёт ноль
+    bool level = platform_button_read();
     // читаем часы
     uint64_t now_us = systime_us();
 
@@ -69,8 +65,11 @@ void button_task_handle(void)
             pressed = true;
             press_count++;
 
-            // каждое нажатие переводит светодиод в следующее состояние
-            led_task_next_state();
+            // сообщаем о нажатии по адресу, полученному при запуске
+            if (on_press != NULL)
+            {
+                on_press();
+            }
         }
         break;
 

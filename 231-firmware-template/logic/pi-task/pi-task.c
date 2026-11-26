@@ -1,8 +1,10 @@
-#include <stdio.h>
-#include "systime/systime.h"
-#include "pi-task.h"
+#include "pi-task/pi-task.h"
 
-// прикидка переехала в pi-task.h: её используют и api
+#include <stdio.h>
+
+#include "systime/systime.h"
+
+// прикидка переехала в pi-task.h: её использует и api
 
 // состояние расчёта: не запускался, считает, готово
 static pi_task_state_t state = PI_TASK_NOT_STARTED;
@@ -15,7 +17,7 @@ static double sign = 1.0;
 static uint64_t start_us = 0;
 static uint64_t spent_us = 0;
 
-// сумма ряда печатается в отладчик и остаётся доступной после расчёта
+// сумма ряда остаётся доступной после расчёта
 volatile double pi_result;
 
 void pi_task_init(void)

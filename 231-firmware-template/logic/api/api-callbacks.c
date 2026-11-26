@@ -1,29 +1,18 @@
+#include "api/api-commands.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <errno.h>
 
 #include "device/device.h"
 #include "profiling/profiling.h"
 #include "systime/systime.h"
 
-#include "led-task.h"
-#include "button-task.h"
-#include "pi-task.h"
+#include "led-task/led-task.h"
+#include "button-task/button-task.h"
+#include "pi-task/pi-task.h"
 #include "firmware.h"
-#include "api.h"
-
-// тип обработчика: команда приходит целиком
-typedef void (*api_callback_t)(const command_t *command);
-
-// строка таблицы: имя, справка и обработчик
-typedef struct
-{
-    const char *name;
-    const char *help;
-    api_callback_t callback;
-} api_command_t;
 
 // разбирает десятичное число целиком: без хвоста, без переполнения, без пустой строки
 static bool parse_u32(const char *text, uint32_t *value)
@@ -75,12 +64,6 @@ static void cmd_uptime(const command_t *command)
 }
 
 // ---- команды светодиода ----
-
-static void cmd_led(const command_t *command)
-{
-    (void)command;
-    led_task_next_state();
-}
 
 static void cmd_led_enable(const command_t *command)
 {
@@ -146,7 +129,6 @@ static void cmd_pi_start(const command_t *command)
 
     if (command->argc > 1)
     {
-        // лишние аргументы
         printf("error: usage pi_start [terms]\n");
         return;
     }
@@ -155,7 +137,6 @@ static void cmd_pi_start(const command_t *command)
     {
         if (!parse_u32(command->argv[0], &terms))
         {
-            // неверная запись числа
             printf("error: usage pi_start [terms]\n");
             return;
         }
@@ -205,7 +186,7 @@ static void cmd_pi(const command_t *command)
     }
 }
 
-// ---- команда профилирования с выключателем ----
+// ---- команды профилирования с выключателем ----
 
 static void cmd_profiling(const command_t *command)
 {
@@ -242,56 +223,20 @@ static void cmd_profiling_reset(const command_t *command)
 #endif
 }
 
-// ---- таблица команд ----
+// ---- таблица команд; help выполняет механизм в api.c ----
 
-static const api_command_t api_commands[] = {
-    { "info",            "print device passport",            cmd_info },
-    { "uptime",          "print milliseconds since reset",   cmd_uptime },
-    { "pi_start",        "start pi calculation; optional arg: number of terms", cmd_pi_start },
-    { "pi",              "print pi calculation state or result", cmd_pi },
-    { "led",             "switch led to the next state",     cmd_led },
-    { "led_enable",      "led on",                           cmd_led_enable },
-    { "led_disable",     "led off",                          cmd_led_disable },
-    { "led_blink",       "led blinking",                     cmd_led_blink },
-    { "led_period",      "set blink period in ms: led_period <ms>", cmd_led_period },
-    { "button",          "print button state and press count", cmd_button },
-    { "profiling",       "print stopwatch results",          cmd_profiling },
-    { "profiling_reset", "reset stopwatch results",          cmd_profiling_reset },
+const api_command_t api_commands[] = {
+    { "info",            "паспорт прибора",                              cmd_info },
+    { "uptime",          "время с момента сброса",                       cmd_uptime },
+    { "led_enable",      "перевести светодиод в состояние «горит»",      cmd_led_enable },
+    { "led_disable",     "перевести светодиод в состояние «выключен»",   cmd_led_disable },
+    { "led_blink",       "перевести светодиод в состояние «мигает»",     cmd_led_blink },
+    { "led_period",      "задать период мигания",                        cmd_led_period },
+    { "button",          "состояние кнопки и число нажатий",             cmd_button },
+    { "pi_start",        "запустить расчёт π",                           cmd_pi_start },
+    { "pi",              "результат или состояние расчёта π",            cmd_pi },
+    { "profiling",       "результаты секундомеров",                      cmd_profiling },
+    { "profiling_reset", "сбросить результаты секундомеров",             cmd_profiling_reset },
 };
 
-#define API_COMMAND_COUNT (sizeof(api_commands) / sizeof(api_commands[0]))
-
-void api_handle(const command_t *command)
-{
-    // команда принята не целиком — выполнять нельзя
-    if (command->truncated)
-    {
-        printf("error: command longer than 63 characters or 4 arguments\n");
-        return;
-    }
-
-    // help выполняется сам: справка берётся из таблицы
-    if (strcmp(command->name, "help") == 0)
-    {
-        printf("help: print this list\n");
-
-        for (uint32_t i = 0; i < API_COMMAND_COUNT; i++)
-        {
-            printf("  %-16s %s\n", api_commands[i].name, api_commands[i].help);
-        }
-
-        return;
-    }
-
-    // ищем команду в таблице
-    for (uint32_t i = 0; i < API_COMMAND_COUNT; i++)
-    {
-        if (strcmp(command->name, api_commands[i].name) == 0)
-        {
-            api_commands[i].callback(command);
-            return;
-        }
-    }
-
-    printf("error: unknown command '%s', try help\n", command->name);
-}
+const uint32_t api_command_count = sizeof(api_commands) / sizeof(api_commands[0]);

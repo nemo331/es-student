@@ -1,27 +1,19 @@
-#include "pico/stdlib.h"
-#include "systime/systime.h"
-#include "led-task.h"
+#include "led-task/led-task.h"
 
-// выводом светодиода владеет задача
-static const uint LED_TASK_PIN = PICO_DEFAULT_LED_PIN;
+#include "systime/systime.h"
+#include "platform/platform.h"
 
 static led_state_t led_state = LED_STATE_BLINK;
 static uint32_t period_ms = 1000;
 static uint64_t last_toggle_us = 0;
+static bool led_on = false;
 
 void led_task_init(void)
 {
-    // настраиваем вывод светодиода: направление — выход, уровень — ноль
-    gpio_init(LED_TASK_PIN);
-    gpio_set_dir(LED_TASK_PIN, GPIO_OUT);
-    gpio_put(LED_TASK_PIN, false);
-
     period_ms = 1000;
-    last_toggle_us = systime_us();
 
     // первое переключение сразу: светодиод загорается при старте
-    led_state = LED_STATE_BLINK;
-    gpio_put(LED_TASK_PIN, true);
+    led_task_set_state(LED_STATE_BLINK);
 }
 
 void led_task_set_state(led_state_t state)
@@ -32,16 +24,19 @@ void led_task_set_state(led_state_t state)
     switch (led_state)
     {
     case LED_STATE_OFF:
-        gpio_put(LED_TASK_PIN, false);
+        led_on = false;
+        platform_led_set(led_on);
         break;
 
     case LED_STATE_ON:
-        gpio_put(LED_TASK_PIN, true);
+        led_on = true;
+        platform_led_set(led_on);
         break;
 
     case LED_STATE_BLINK:
         // первое переключение сразу: светодиод загорается, отсчёт заново
-        gpio_put(LED_TASK_PIN, true);
+        led_on = true;
+        platform_led_set(led_on);
         last_toggle_us = systime_us();
         break;
     }
@@ -82,7 +77,8 @@ void led_task_handle(void)
     case LED_STATE_BLINK:
         if (systime_period_elapsed(&last_toggle_us, (uint64_t)period_ms * 1000 / 2))
         {
-            gpio_xor_mask(1u << LED_TASK_PIN);
+            led_on = !led_on;
+            platform_led_set(led_on);
         }
         break;
     }
