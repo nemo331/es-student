@@ -14,6 +14,7 @@ add_subdirectory(../libs ${CMAKE_BINARY_DIR}/libs)
 # выключатель профилирования: 0 — вызовов секундомеров в образе нет
 target_compile_definitions(profiling PUBLIC
     PROFILING_ENABLED=1
+    PROFILING_STOPWATCH_COUNT=6
 )
 
 # железо прибора: единственное место проекта с SDK
@@ -38,7 +39,9 @@ add_library(logic STATIC
     logic/led-task/led-task.c
     logic/button-task/button-task.c
     logic/pi-task/pi-task.c
+    logic/telemetry-task/telemetry-task.c
 )
+
 # путь к заголовкам — папка logic
 target_include_directories(logic PUBLIC
     logic
