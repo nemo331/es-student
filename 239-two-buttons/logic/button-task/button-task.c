@@ -8,6 +8,9 @@
 // порог 20 мс перекрывает это время с запасом (20000 мкс)
 #define BOUNCE_US 20000
 
+// порог долгого нажатия: удержание дольше секунды — долгое нажатие
+#define LONG_PRESS_US 1000000
+
 // состояния кнопки: отпущена, ждём подтверждения нажатия, нажата,
 // ждём подтверждения отпускания
 typedef enum {
@@ -17,31 +20,39 @@ typedef enum {
     BUTTON_STATE_RELEASE_WAIT,
 } button_state_t;
 
-// машина одной кнопки: состояние, время смены уровня, счётчик нажатий
+// машина одной кнопки
 typedef struct
 {
     button_state_t state;
-    uint64_t edge_us;
+    uint64_t edge_us;       // момент смены уровня, кандидат на переход
+    uint64_t press_us;      // момент подтверждённого нажатия
+    bool long_reported;     // о долгом нажатии уже сообщили
     uint32_t press_count;
     bool pressed;
 } button_machine_t;
 
 static button_machine_t machines[PLATFORM_BUTTON_COUNT];
-static button_task_callback_t callbacks[PLATFORM_BUTTON_COUNT];
+static button_task_callback_t short_callbacks[PLATFORM_BUTTON_COUNT];
+static button_task_callback_t long_callbacks[PLATFORM_BUTTON_COUNT];
 
-void button_task_init(platform_button_t button, button_task_callback_t on_press)
+void button_task_init(platform_button_t button,
+                      button_task_callback_t on_press,
+                      button_task_callback_t on_long_press)
 {
     if (button >= PLATFORM_BUTTON_COUNT)
     {
         return;
     }
 
-    callbacks[button] = on_press;
+    short_callbacks[button] = on_press;
+    long_callbacks[button] = on_long_press;
 
     machines[button].state = BUTTON_STATE_RELEASED;
     machines[button].pressed = false;
     machines[button].press_count = 0;
+    machines[button].long_reported = false;
     machines[button].edge_us = systime_us();
+    machines[button].press_us = 0;
 }
 
 void button_task_handle(void)
@@ -76,13 +87,17 @@ void button_task_handle(void)
             else if (now_us - machine->edge_us >= BOUNCE_US)
             {
                 machine->state = BUTTON_STATE_PRESSED;
+                machine->press_us = now_us;
                 machine->pressed = true;
                 machine->press_count++;
+                machine->long_reported = false;
 
-                // сообщаем о нажатии по адресу, полученному при запуске
-                if (callbacks[i] != NULL)
+                // у кнопки без долгого действия короткое нажатие известно
+                // сразу; с долгим действием ждать отпускания — в момент
+                // нажатия ещё неизвестно, станет ли оно долгим
+                if (long_callbacks[i] == NULL && short_callbacks[i] != NULL)
                 {
-                    callbacks[i]();
+                    short_callbacks[i]();
                 }
             }
             break;
@@ -93,6 +108,14 @@ void button_task_handle(void)
             {
                 machine->edge_us = now_us;
                 machine->state = BUTTON_STATE_RELEASE_WAIT;
+            }
+            // кнопку держат дольше секунды — долгое нажатие, один раз
+            else if (long_callbacks[i] != NULL &&
+                     !machine->long_reported &&
+                     now_us - machine->press_us >= LONG_PRESS_US)
+            {
+                machine->long_reported = true;
+                long_callbacks[i]();
             }
             break;
 
@@ -107,6 +130,17 @@ void button_task_handle(void)
             {
                 machine->state = BUTTON_STATE_RELEASED;
                 machine->pressed = false;
+
+                // у кнопки с долгим действием короткое сообщается при
+                // отпускании: теперь известно, что секунды не случилось
+                if (long_callbacks[i] != NULL &&
+                    !machine->long_reported &&
+                    short_callbacks[i] != NULL)
+                {
+                    short_callbacks[i]();
+                }
+
+                machine->long_reported = false;
             }
             break;
         }

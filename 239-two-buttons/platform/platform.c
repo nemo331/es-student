@@ -37,11 +37,11 @@ bool platform_button_read(platform_button_t button)
 
     switch (button)
     {
-    case PLATFORM_BUTTON_1:
+    case PLATFORM_BUTTON_LED:
         pin = PLATFORM_BUTTON_1_PIN;
         break;
 
-    case PLATFORM_BUTTON_2:
+    case PLATFORM_BUTTON_PERIOD:
         pin = PLATFORM_BUTTON_2_PIN;
         break;
 

@@ -21,3 +21,5 @@ void led_task_next_state(void);
 
 // переводит период на следующий из круга 250 → 500 → 1000 мс
 void led_task_next_period(void);
+// переводит светодиод в состояние «мигает»; действие долгого нажатия
+void led_task_blink(void);

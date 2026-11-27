@@ -42,11 +42,13 @@ int main()
     // скорее всего не видно — порт ещё не открыт
     LOG_INF("%s %s\n", FIRMWARE_NAME, FIRMWARE_VERSION);
 
-    // связь кнопок с действиями задаёт main.c:
-    // первая переводит светодиод в следующее состояние,
-    // вторая — период на следующий из круга
-    button_task_init(PLATFORM_BUTTON_1, led_task_next_state);
-    button_task_init(PLATFORM_BUTTON_2, led_task_next_period);
+        // связи кнопок с действиями задаёт main.c:
+    // короткое нажатие первой — следующее состояние светодиода,
+    // долгое (дольше секунды) — мигание;
+    // короткое нажатие второй — следующий период из круга, долгого нет
+    button_task_init(PLATFORM_BUTTON_LED, led_task_next_state, led_task_blink);
+    button_task_init(PLATFORM_BUTTON_PERIOD, led_task_next_period, NULL);
+
 
     while (1)
     {

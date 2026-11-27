@@ -121,3 +121,10 @@ void led_task_next_period(void)
         break;
     }
 }
+
+// переводит светодиод в состояние «мигает»; действие долгого нажатия,
+// которое main.c передаёт задаче кнопки
+void led_task_blink(void)
+{
+    led_task_set_state(LED_STATE_BLINK);
+}
