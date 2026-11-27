@@ -7,6 +7,9 @@ void platform_init(void);
 
 void platform_led_set(bool on);
 
+// включает и выключает заряд RC-цепи через GP22
+void platform_charge_set(bool on);
+
 // нажата ли кнопка сейчас, без подавления дребезга
 bool platform_button_read(void);
 

@@ -338,6 +338,23 @@ void api_print_telemetry(const telemetry_record_t *record)
            (double)record->temp_c);
 }
 
+// заряд RC-цепи у platform, ответ charge: on | off
+static void cmd_charge_on(const command_t *command)
+{
+    (void)command;
+
+    platform_charge_set(true);
+    printf("charge: on\n");
+}
+
+static void cmd_charge_off(const command_t *command)
+{
+    (void)command;
+
+    platform_charge_set(false);
+    printf("charge: off\n");
+}
+
 
 // ---- таблица команд ----
 
@@ -366,6 +383,8 @@ const api_command_t api_commands[] = {
     { "get_temp",        "chip temperature, degrees Celsius", cmd_get_temp },
     { "tm_start",        "start telemetry: tm_start [<period_ms>]", cmd_tm_start },
     { "tm_stop",         "stop telemetry",                cmd_tm_stop },
+    { "charge_on",       "set charge output high",         cmd_charge_on },
+    { "charge_off",      "set charge output low",          cmd_charge_off },
 
 };
 

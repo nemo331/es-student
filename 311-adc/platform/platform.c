@@ -6,6 +6,9 @@
 #define PLATFORM_LED_PIN    PICO_DEFAULT_LED_PIN
 #define PLATFORM_BUTTON_PIN 15
 
+// вывод, через резистор заряжающий конденсатор RC-цепи
+#define CHARGE_PIN 22
+
 // вход АЦП: вывод GP26, канал 0
 #define ADC_PIN 26
 #define ADC_CHANNEL 0
@@ -37,6 +40,12 @@ void platform_init(void)
     gpio_set_dir(PLATFORM_BUTTON_PIN, GPIO_IN);
     gpio_pull_up(PLATFORM_BUTTON_PIN);
 
+    // заряд RC-цепи: GP22 на выход, на выводе ноль, чтобы конденсатор
+    // оставался разряженным, пока заряд не включат
+    gpio_init(CHARGE_PIN);
+    gpio_set_dir(CHARGE_PIN, GPIO_OUT);
+    gpio_put(CHARGE_PIN, false);
+
     // АЦП: сброс и включение модуля, затем отдача вывода аналоговому
     // входу — она отключает у вывода цифровую часть и подтяжки,
     // которые иначе исказили бы напряжение
@@ -50,6 +59,12 @@ void platform_init(void)
 void platform_led_set(bool on)
 {
     gpio_put(PLATFORM_LED_PIN, on);
+}
+
+void platform_charge_set(bool on)
+{
+    // 3,3 В на GP22 или ноль
+    gpio_put(CHARGE_PIN, on);
 }
 
 bool platform_button_read(void)
