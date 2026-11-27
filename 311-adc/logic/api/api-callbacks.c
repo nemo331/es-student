@@ -279,6 +279,14 @@ static void cmd_get_voltage(const command_t *command)
     printf("voltage: %.3f V\n", platform_voltage_read());
 }
 
+// температура кристалла у platform, ответ temp: <температура> C
+static void cmd_get_temp(const command_t *command)
+{
+    (void)command;
+
+    printf("temp: %.1f C\n", platform_temp_read());
+}
+
 
 // ---- таблица команд ----
 
@@ -304,7 +312,7 @@ const api_command_t api_commands[] = {
     { "profiling",       "stopwatch results",              cmd_profiling },
     { "profiling_reset", "reset stopwatch results",        cmd_profiling_reset },
     { "get_voltage",     "voltage on GP26, ADC input 0",     cmd_get_voltage },
-
+    { "get_temp",        "chip temperature, degrees Celsius", cmd_get_temp },
 };
 
 const uint32_t api_command_count = sizeof(api_commands) / sizeof(api_commands[0]);
