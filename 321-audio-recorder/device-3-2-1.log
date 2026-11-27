@@ -1,0 +1,77 @@
+задание: 3.2.1
+проект: 321-audio-recorder
+устройство: 2e8a:000a
+серийный номер: 5303284740DF8F1C
+порт: COM7
+начало: 2026-11-27T20:36:49
+   0.000 --> 
+   0.561 --> help
+   0.563 <-- help
+   0.573 <-- help             list of commands
+   0.573 <-- info             device passport
+   0.574 <-- uptime           time since reset
+   0.574 <-- led_enable       set led to on
+   0.574 <-- led_disable      set led to off
+   0.574 <-- led_blink        set led to blink
+   0.574 <-- led_period       set blink period in ms
+   0.574 <-- button           button state and press count
+   0.574 <-- pi_start         start pi calculation
+   0.574 <-- pi               pi result or calculation state
+   0.574 <-- profiling        stopwatch results
+   0.575 <-- profiling_reset  reset stopwatch results
+   0.575 <-- get_voltage      voltage on GP26, ADC input 0
+   0.575 <-- get_temp         chip temperature, degrees Celsius
+   0.575 <-- tm_start         start telemetry: tm_start [<period_ms>]
+   0.578 <-- tm_stop          stop telemetry
+   0.579 <-- charge_on        set charge output high
+   0.581 <-- charge_off       set charge output low
+   0.641 <-- timer_blink_start blink led by timer: timer_blink_start <period_ms>
+   0.647 <-- timer_blink_stop stop timer blink, number of toggles
+   1.597 --> info
+   1.661 <-- info
+   1.667 <-- name: es-recorder
+   1.668 <-- version: 1.0.0
+   1.676 <-- project: 321-audio-recorder
+   1.680 <-- repo: https://github.com/nemo331/es-student
+   1.682 <-- board: pico_w
+   1.689 <-- serial: 5303284740DF8F1C
+   1.691 <-- chip: manufacturer 0x927, part 0x0002, revision 2
+   1.695 <-- pico-sdk: 2.3.0
+   2.649 --> timer_blink_start 250
+   2.712 <-- timer_blink_start 250
+   2.718 <-- timer_blink: started, period 250 ms
+   3.661 --> pi_start 3000000
+   3.724 <-- pi_start 3000000
+   3.726 <-- pi: started, 3000000 terms
+   4.681 --> uptime
+   4.743 <-- uptime
+   4.749 <-- uptime: 257751 ms
+   5.689 --> info
+   5.753 <-- info
+   5.759 <-- name: es-recorder
+   5.759 <-- version: 1.0.0
+   5.767 <-- project: 321-audio-recorder
+   5.769 <-- repo: https://github.com/nemo331/es-student
+   5.771 <-- board: pico_w
+   5.776 <-- serial: 5303284740DF8F1C
+   5.778 <-- chip: manufacturer 0x927, part 0x0002, revision 2
+   5.785 <-- pico-sdk: 2.3.0
+   6.735 --> pi
+   6.799 <-- pi
+   6.804 <-- pi: running
+   8.781 --> timer_blink_stop
+   8.845 <-- timer_blink_stop
+   8.882 <-- timer_blink: stopped, 24 toggles
+   9.844 --> timer_blink_start 100
+   9.907 <-- timer_blink_start 100
+   9.914 <-- timer_blink: started, period 100 ms
+  11.891 --> timer_blink_stop
+  11.955 <-- timer_blink_stop
+  11.961 <-- timer_blink: stopped, 20 toggles
+  12.905 --> timer_blink_start 5
+  12.969 <-- timer_blink_start 5
+  12.974 <-- error: period_ms must be 10..60000
+  13.463 --> timer_blink_start
+  13.525 <-- timer_blink_start
+  13.530 <-- error: usage timer_blink_start <period_ms>
+итог: отправлено кадров 13, принято строк 57
