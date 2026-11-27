@@ -1,10 +1,8 @@
 #include "pi-task/pi-task.h"
-
 #include <stdio.h>
-
 #include "systime/systime.h"
 
-// прикидка переехала в pi-task.h: её использует и api
+// прикидка переехала в pi-task.h: её используют и api
 
 // состояние расчёта: не запускался, считает, готово
 static pi_task_state_t state = PI_TASK_NOT_STARTED;
@@ -43,6 +41,8 @@ bool pi_task_start(uint32_t new_terms)
     done_terms = 0;
     sum = 0.0;
     sign = 1.0;
+
+    // время считается от pi_task_start() до последней порции
     start_us = systime_us();
     state = PI_TASK_CALCULATING;
 

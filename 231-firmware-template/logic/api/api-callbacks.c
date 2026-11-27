@@ -14,7 +14,8 @@
 #include "pi-task/pi-task.h"
 #include "firmware.h"
 
-// разбирает десятичное число целиком: без хвоста, без переполнения, без пустой строки
+// разбирает десятичное число: только цифры, от 0 до 4 294 967 295.
+// Знак, посторонние символы и переполнение — ошибка записи
 static bool parse_u32(const char *text, uint32_t *value)
 {
     if (text == NULL || *text == '\0')
@@ -22,12 +23,21 @@ static bool parse_u32(const char *text, uint32_t *value)
         return false;
     }
 
+    // только цифры: strtoul сам принимает знак и пробелы, а этого нельзя
+    for (const char *p = text; *p != '\0'; p++)
+    {
+        if (*p < '0' || *p > '9')
+        {
+            return false;
+        }
+    }
+
     errno = 0;
     char *end = NULL;
     unsigned long number = strtoul(text, &end, 10);
 
-    // ничего не разобрано, после числа остался мусор или число не влезло в long
-    if (end == text || *end != '\0' || errno == ERANGE)
+    // переполнение: число не влезло в unsigned long (32 бита на ARM)
+    if (errno == ERANGE)
     {
         return false;
     }
@@ -45,7 +55,7 @@ static void cmd_info(const command_t *command)
     device_info_t info;
     device_get_info(&info);
 
-    // паспорт начинается с имени и версии — так требует приложение Б
+    // восемь строк в порядке таблицы приложения Б
     printf("name: %s\n", FIRMWARE_NAME);
     printf("version: %s\n", FIRMWARE_VERSION);
     printf("project: %s\n", FIRMWARE_PROJECT);
@@ -63,24 +73,56 @@ static void cmd_uptime(const command_t *command)
     printf("uptime: %llu ms\n", (unsigned long long)systime_ms());
 }
 
-// ---- команды светодиода ----
+// ---- команды светодиода: единый формат ответа ----
+
+// имя состояния для ответа
+static const char *led_state_name(led_state_t state)
+{
+    switch (state)
+    {
+    case LED_STATE_OFF:
+        return "off";
+
+    case LED_STATE_ON:
+        return "on";
+
+    case LED_STATE_BLINK:
+        return "blink";
+    }
+
+    return "?";
+}
+
+// печатает состояние светодиода: led: <состояние>, period <N> ms
+static void print_led(void)
+{
+    printf("led: %s, period %u ms\n",
+           led_state_name(led_task_get_state()),
+           (unsigned)led_task_get_period_ms());
+}
 
 static void cmd_led_enable(const command_t *command)
 {
     (void)command;
+
     led_task_set_state(LED_STATE_ON);
+    print_led();
 }
 
 static void cmd_led_disable(const command_t *command)
 {
     (void)command;
+
     led_task_set_state(LED_STATE_OFF);
+    print_led();
 }
 
 static void cmd_led_blink(const command_t *command)
 {
     (void)command;
+
     led_task_set_state(LED_STATE_BLINK);
+    print_led();
 }
 
 static void cmd_led_period(const command_t *command)
@@ -88,7 +130,7 @@ static void cmd_led_period(const command_t *command)
     // период в миллисекундах — обязательный аргумент
     if (command->argc != 1)
     {
-        printf("error: usage led_period <ms>\n");
+        printf("error: usage led_period <period_ms>\n");
         return;
     }
 
@@ -96,17 +138,19 @@ static void cmd_led_period(const command_t *command)
 
     if (!parse_u32(command->argv[0], &period))
     {
-        printf("error: usage led_period <ms>\n");
+        // знак, посторонние символы или переполнение — ошибка записи
+        printf("error: usage led_period <period_ms>\n");
         return;
     }
 
-    if (!led_task_set_period_ms(period))
+    if (period == 0)
     {
-        printf("error: led_period: period must be greater than zero\n");
+        printf("error: period_ms must be greater than 0\n");
         return;
     }
 
-    printf("led_period: %u ms\n", (unsigned)period);
+    led_task_set_period_ms(period);
+    print_led();
 }
 
 // ---- команда кнопки ----
@@ -129,7 +173,7 @@ static void cmd_pi_start(const command_t *command)
 
     if (command->argc > 1)
     {
-        printf("error: usage pi_start [terms]\n");
+        printf("error: usage pi_start [<terms>]\n");
         return;
     }
 
@@ -137,13 +181,13 @@ static void cmd_pi_start(const command_t *command)
     {
         if (!parse_u32(command->argv[0], &terms))
         {
-            printf("error: usage pi_start [terms]\n");
+            printf("error: usage pi_start [<terms>]\n");
             return;
         }
 
         if (terms == 0)
         {
-            printf("error: terms must be greater than zero\n");
+            printf("error: terms must be greater than 0\n");
             return;
         }
     }
@@ -154,7 +198,7 @@ static void cmd_pi_start(const command_t *command)
         return;
     }
 
-    printf("pi_start: %u terms\n", (unsigned)terms);
+    printf("pi: started, %u terms\n", (unsigned)terms);
 }
 
 static void cmd_pi(const command_t *command)
@@ -168,7 +212,7 @@ static void cmd_pi(const command_t *command)
         break;
 
     case PI_TASK_CALCULATING:
-        printf("pi: calculating\n");
+        printf("pi: running\n");
         break;
 
     case PI_TASK_DONE:
@@ -178,15 +222,16 @@ static void cmd_pi(const command_t *command)
 
         if (pi_task_get_result(&result, &elapsed_us))
         {
-            printf("pi: %.9f\n", result);
-            printf("time: %llu ms\n", (unsigned long long)(elapsed_us / 1000));
+            printf("pi: %.9f in %llu ms\n",
+                   result,
+                   (unsigned long long)(elapsed_us / 1000));
         }
         break;
     }
     }
 }
 
-// ---- команды профилирования с выключателем ----
+// ---- команды профилирования ----
 
 static void cmd_profiling(const command_t *command)
 {
@@ -199,7 +244,9 @@ static void cmd_profiling(const command_t *command)
 
         if (profiling_get(i, &result))
         {
-            printf("%-9s count %-9u mean %.2f us max %u us\n",
+            // формат из приложения Б: имя и число прижаты влево на 10 позиций,
+            // перед max два пробела
+            printf("%-10s count %-10u mean %.2f us  max %u us\n",
                    result.name,
                    (unsigned)result.count,
                    result.mean_us,
@@ -223,20 +270,29 @@ static void cmd_profiling_reset(const command_t *command)
 #endif
 }
 
-// ---- таблица команд; help выполняет механизм в api.c ----
+// ---- таблица команд ----
 
+static void cmd_help(const command_t *command)
+{
+    // перечень печатает механизм в api.c, эта запись только для перечня
+    (void)command;
+}
+
+// справки help и info взяты из примера приложения Б дословно;
+// остальные — перевод описаний из перечня команд
 const api_command_t api_commands[] = {
-    { "info",            "паспорт прибора",                              cmd_info },
-    { "uptime",          "время с момента сброса",                       cmd_uptime },
-    { "led_enable",      "перевести светодиод в состояние «горит»",      cmd_led_enable },
-    { "led_disable",     "перевести светодиод в состояние «выключен»",   cmd_led_disable },
-    { "led_blink",       "перевести светодиод в состояние «мигает»",     cmd_led_blink },
-    { "led_period",      "задать период мигания",                        cmd_led_period },
-    { "button",          "состояние кнопки и число нажатий",             cmd_button },
-    { "pi_start",        "запустить расчёт π",                           cmd_pi_start },
-    { "pi",              "результат или состояние расчёта π",            cmd_pi },
-    { "profiling",       "результаты секундомеров",                      cmd_profiling },
-    { "profiling_reset", "сбросить результаты секундомеров",             cmd_profiling_reset },
+    { "help",            "list of commands",               cmd_help },
+    { "info",            "device passport",                cmd_info },
+    { "uptime",          "time since reset",               cmd_uptime },
+    { "led_enable",      "set led to on",                  cmd_led_enable },
+    { "led_disable",     "set led to off",                 cmd_led_disable },
+    { "led_blink",       "set led to blink",               cmd_led_blink },
+    { "led_period",      "set blink period in ms",         cmd_led_period },
+    { "button",          "button state and press count",   cmd_button },
+    { "pi_start",        "start pi calculation",           cmd_pi_start },
+    { "pi",              "pi result or calculation state", cmd_pi },
+    { "profiling",       "stopwatch results",              cmd_profiling },
+    { "profiling_reset", "reset stopwatch results",        cmd_profiling_reset },
 };
 
 const uint32_t api_command_count = sizeof(api_commands) / sizeof(api_commands[0]);

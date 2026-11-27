@@ -13,14 +13,13 @@ void api_handle(const command_t *command)
         return;
     }
 
-    // help выполняет механизм: справка берётся из таблицы
+    // help выполняет механизм: печатает каждую команду таблицы с её справкой,
+    // начиная с help
     if (strcmp(command->name, "help") == 0)
     {
-        printf("help: print this list\n");
-
         for (uint32_t i = 0; i < api_command_count; i++)
         {
-            printf("  %-16s %s\n", api_commands[i].name, api_commands[i].help);
+            printf("%-16s %s\n", api_commands[i].name, api_commands[i].help);
         }
 
         return;
